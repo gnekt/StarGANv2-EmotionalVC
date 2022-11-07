@@ -6,7 +6,6 @@ This work is licensed under the Creative Commons Attribution-NonCommercial
 http://creativecommons.org/licenses/by-nc/4.0/ or send a letter to
 Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 """
-
 import os
 import os.path as osp
 
@@ -18,60 +17,23 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from enum import Enum
 
-## Enumerator Factory Import
-from EnumeratorFactory.SamplingType import DownSamplingType
-
-# //Scope: 
-# //Input: 
-# //Output: 
-# //----
-# //NOTE:  
-# //TODO: Da refactorizzare
-# //BUG: 
-# //FIXME: 
 class DownSample(nn.Module):
-    """
-    Module for downsampling
-    """
-    def __init__(self, layer_type: DownSamplingType):   
-        """Constructor of a DownSample module
-
-        Args:
-            layer_type (DownSamplingType): type of downsampling
-
-        Raises:
-            TypeError: layer_type is not an object of the class DownSamplingType
-            RuntimeError: 
-        """         
+    def __init__(self, layer_type):
         super().__init__()
-        if not isinstance(layer_type,DownSamplingType):
-            raise TypeError("Layer type must be a DownSamplingType! Check Enumerator Factory")  
-        if self.layer_type not in DownSamplingType:
-            raise RuntimeError(f'Got unexpected donwsampletype {self.layer_type}, expected is [none, timepreserve, half]')
-        self.layer_type: str = layer_type
-        
+        self.layer_type = layer_type
+
     def forward(self, x):
-        """_summary_
-
-        Args:
-            x (torch.tensor): _description_
-
-        Raises:
-            RuntimeError: _description_
-
-        Returns:
-            _type_: _description_
-        """        
-        if not isinstance(x, torch.Tensor):
-            raise RuntimeError(f"Input must be a tensor! got {type(x)}")
-        if self.layer_type == 'timepreserve': 
-            return F.avg_pool2d(x, (2, 1)) 
-        if self.layer_type == 'half':
+        if self.layer_type == 'none':
+            return x
+        elif self.layer_type == 'timepreserve':
+            return F.avg_pool2d(x, (2, 1))
+        elif self.layer_type == 'half':
             return F.avg_pool2d(x, 2)
-        return x
-        
+        else:
+            raise RuntimeError('Got unexpected donwsampletype %s, expected is [none, timepreserve, half]' % self.layer_type)
+
+
 class UpSample(nn.Module):
     def __init__(self, layer_type):
         super().__init__()

@@ -9,5 +9,5 @@
 
 
 import zipfile
-with zipfile.ZipFile("asd.zip", 'r') as zip_ref:
-    zip_ref.extractall("./Vocoder/hifi_gan_vctk")
+with zipfile.ZipFile("Data/VCTK-Corpus-0.92.zip", 'r') as zip_ref:
+    zip_ref.extractall("./Data")

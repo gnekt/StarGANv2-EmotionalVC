@@ -1,0 +1,86 @@
+-------------------------------------
+22nd March 2017
+Junichi Yamagishi
+
+Following audio files include the faults and therefore we deleted them
+
+p282_019 -> misspoken utterance. The speaker recognized this and moaned in annoyance.
+p295_334 -> silence, silent recording
+p295_047 -> silence
+p302_013 -> silence
+p303_303 -> silence
+p305_423 -> silence
+p306_114 -> silence
+p306_140 -> silence
+p306_235 -> silence
+p317_424 -> silence
+p330_424 -> silence
+p335_424 -> silence
+p345_266 -> cut off recording
+p345_387 -> silence
+p345_388 -> cut off recording, recording starting too late
+
+We also fixed issues of the following text files  
+p246_024 -> This is a very common type of bow, one showing mainly red and yellow, with little or no green or blue.She is given a new deputy minister for transport and planning.
+p271_024 -> This is a very common type of bow, one showing mainly red and yellow, with little or no green or blue.She is given a new deputy minister for transport and planning.
+p275_024 -> This is a very common type of bow, one showing mainly red and yellow, with little or no green or blue.She is given a new deputy minister for transport and planning.
+p277_024 -> This is a very common type of bow, one showing mainly red and yellow, with little or no green or blue.It's nice to hear.
+
+
+-------------------------------------
+20th August 2018
+Junichi Yamagishi
+
+We deleted the following audio file 
+
+p323_424  -> silence, silent recording
+
+The information of p280 was added to speaker-info.txt
+280  25  F    Unknown  France 
+
+Re-format text files as follows: 
+Remove ) and " from text files  
+Add LF line terminators to text files if they are missing  
+Change CRLF line terminators of p247, p259, p264, and p274 to LF
+Delete a space before question mark (change " ?" to "?") 
+-------------------------------------
+
+30th November 2018
+Junichi Yamagishi
+
+1: Audio files recorded via DPA 4035 (mic1) have very low frequency noises and therefore we added audio files recorded via MKH 800 (mic2)     
+
+2: We changed the waveform format from the PCM to the lossless Flac format in order to reduce the database size. For changing Flac encoded audio files back to PCM, please use sox. 
+% sox input.flac output.wav
+
+3: For converting original recording files at 96kHz/24 bit to 48kHz/16 bit, we used dithering. Therefore audio files of mic1 are not identical to those of previous version, either.  
+sox $argv[1] -G -c 1 -b 16 $argv[2] remix 1 rate -v -s 48000 dither -s
+sox $argv[1] -G -c 1 -b 16 $argv[3] remix 2 rate -v -s 48000 dither -s  
+
+4: Delete txt/p247/p274_470.txt
+
+5: Delete wav48/p326/p326_365.wav
+
+6: Delete p351/p351_361, p306/p306_151, p295/p295_001, p300/p300_155, p306/p306_352, p254/p254_368, p232/232_212, p282/p282_116, and p277/p277_388
+
+6th December 2018 
+A new female speaker s5 was added. More data (around 3,000 sentences) of s5 may be released in the near future. Stay tuned!  
+
+
+26th Feb 2019 
+Problematics files found by Yusuke Yasuda were deleted or processed. 
+p282_008: Failed recording. Deleted
+p240_351: Cut burst noise in the beginning of the audio files
+p316_189: Cut burst noise in the beginning of the audio files 
+p258_109: Failed recording. Deleted  
+p272_044: Cut noise in the beginning of the audio files 
+p286_029: Failed recording. Deleted  
+p304_023: Cut noise in the beginning of the audio files 
+p306_148: Failed recording. Deleted 
+p306_149: Failed recording. Deleted  
+p306_150: Failed recording. Deleted  
+p306_152: Failed recording. Deleted  
+p239_083: Failed recording. Deleted  
+
+16th March 2019 
+Long silences are trimmed by Yusuke Yasuda. See log.txt

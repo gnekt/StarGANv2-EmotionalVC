@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 from torch import nn
 from torch.utils.data import DataLoader
-
+import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -34,27 +34,41 @@ MEL_PARAMS = {
 }
 
 class MelDataset(torch.utils.data.Dataset):
+    """Dataset container
+
+    Args:
+        Dataset: extend base torch class Dataset
+    """    
+    
     def __init__(self,
-                 data_list,
+                 dataset_path: str,
                  sr=24000,
                  validation=False,
+                 sep=";"                 
                  ):
+        logger.info(f"MelDataset:__init__: Constructor call of dataset")
+        logger.info(f"MelDataset:__init__: Check existence of dataset path..")
+        
+        if not os.path.exists(dataset):
+            raise FileExistsError(f"Dataset: {dataset_path} not found, check path!")
+        logger.info(f"MelDataset:__init__: OK.")
+        
+        logger.info(f"MelDataset:__init__: Load dataset into a dataframe object..")
+        self.dataset = pd.read_csv(dataset_path, sep=sep)
+        logger.info(f"MelDataset:__init__: Ok.")
 
-        _data_list = [l[:-1].split('|') for l in data_list]
-        self.data_list = [(path, int(label)) for path, label in _data_list]
-        self.data_list_per_class = {
-            target: [(path, label) for path, label in self.data_list if label == target] \
-            for target in list(set([label for _, label in self.data_list]))}
-
+        logger.info(f"MelDataset:__init__: Sampling Rate {sr}")
         self.sr = sr
-        self.to_melspec = torchaudio.transforms.MelSpectrogram(**MEL_PARAMS)
-
-        self.mean, self.std = -4, 4
+        
+        logger.info(f"MelDataset:__init__: Dataset scope -> {validation}, (False) training/ (True) validation")
         self.validation = validation
+        
+        self.to_melspec = torchaudio.transforms.MelSpectrogram(**MEL_PARAMS)
+        self.mean, self.std = -4, 4
         self.max_mel_length = 192
 
     def __len__(self):
-        return len(self.data_list)
+        return self.dataset.shape[0]
 
     def __getitem__(self, idx):
         data = self.data_list[idx]
