@@ -9,5 +9,5 @@
 
 
 import zipfile
-with zipfile.ZipFile("Data/VCTK-Corpus-0.92.zip", 'r') as zip_ref:
-    zip_ref.extractall("./Data")
+with zipfile.ZipFile("datasets.zip", 'r') as zip_ref:
+    zip_ref.extractall("./datasets")

@@ -52,7 +52,7 @@ def main(config_path):
     file_handler.setFormatter(logging.Formatter('%(levelname)s:%(asctime)s: %(message)s'))
     logger.addHandler(file_handler)
     
-    batch_size = config.get('batch_size', 10)
+    batch_size = config.get('batch_size', 2)
     device = config.get('device', 'cpu')
     epochs = config.get('epochs', 1000)
     save_freq = config.get('save_freq', 20)
@@ -62,15 +62,14 @@ def main(config_path):
     fp16_run = config.get('fp16_run', False)
     
     # load data
-    train_list, val_list = get_data_path_list(train_path, val_path)
-    train_dataloader = build_dataloader(train_list,
+    train_dataloader = build_dataloader(train_path,
                                         batch_size=batch_size,
-                                        num_workers=4,
+                                        num_workers=2,
                                         device=device)
-    val_dataloader = build_dataloader(val_list,
+    val_dataloader = build_dataloader(val_path,
                                       batch_size=batch_size,
                                       validation=True,
-                                      num_workers=2,
+                                      num_workers=1,
                                       device=device)
 
     # load pretrained ASR model
@@ -136,7 +135,6 @@ def main(config_path):
                     writer.add_figure('eval_spec', v, epoch)
         if (epoch % save_freq) == 0:
             trainer.save_checkpoint(osp.join(log_dir, 'epoch_%05d.pth' % epoch))
-
     return 0
 
 def get_data_path_list(train_path=None, val_path=None):
