@@ -1,9 +1,9 @@
-log_dir: "Models/VCTK20"
+log_dir: "Models/Experiment-1_New"
 save_freq: 2
 device: "cuda"
-epochs: 150
-batch_size: 2
-pretrained_model: ""
+epochs: 300
+batch_size: 15
+pretrained_model: "Models/Experiment-1/epoch.pth"
 load_only_params: false
 fp16_run: true
 

@@ -1,6 +1,7 @@
 #coding: utf-8
 
 import os
+import sys
 import time
 import random
 import random
@@ -133,8 +134,13 @@ class MelDataset(torch.utils.data.Dataset):
 
         Returns:
             torch.tensor: tensorial representation of source wav
-        """        
-        wave, sr = sf.read(wave_path)
+        """ 
+        try:       
+            wave, sr = sf.read(wave_path) #FIXME Sometimes raise an exception, probably due to some mispelling in the path-file of the source
+        except Exception as ex:
+            print(ex)
+            print(wave_path)
+            sys.exit(1)
         wave_tensor = torch.from_numpy(wave).float()
         return wave_tensor
 

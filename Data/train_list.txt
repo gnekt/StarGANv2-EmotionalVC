@@ -11203,8 +11203,8 @@
 ./datasets/eng/RAVDESS/neutral_ravdess_08_F_03-01-01-01-02-01-08.wav|./datasets/eng/RAVDESS/happy_ravdess_08_F_03-01-03-02-02-02-08.wav|happy
 ./datasets/eng/RAVDESS/neutral_ravdess_08_F_03-01-01-01-02-01-08.wav|./datasets/eng/RAVDESS/sad_ravdess_08_F_03-01-04-01-02-01-08.wav|sad
 ./datasets/eng/RAVDESS/neutral_ravdess_08_F_03-01-01-01-02-01-08.wav|./datasets/eng/RAVDESS/sad_ravdess_08_F_03-01-04-01-02-02-08.wav|sad
-./datasets/eng/SAVEE/neutral_savee_01_M_n04.wav|./datasets/datasets/eng/SAVEE/happy_savee_01_M_h04.wav|happy
-./datasets/datasets/eng/SAVEE/neutral_savee_01_M_n05.wav|./datasets/datasets/eng/SAVEE/anger_savee_01_M_a05.wav|anger
+./datasets/eng/SAVEE/neutral_savee_01_M_n04.wav|./datasets/eng/SAVEE/happy_savee_01_M_h04.wav|happy
+./datasets/eng/SAVEE/neutral_savee_01_M_n05.wav|./datasets/eng/SAVEE/anger_savee_01_M_a05.wav|anger
 ./datasets/eng/SAVEE/neutral_savee_01_M_n05.wav|./datasets/eng/SAVEE/happy_savee_01_M_h05.wav|happy
 ./datasets/eng/SAVEE/neutral_savee_01_M_n06.wav|./datasets/eng/SAVEE/anger_savee_01_M_a06.wav|anger
 ./datasets/eng/SAVEE/neutral_savee_01_M_n06.wav|./datasets/eng/SAVEE/happy_savee_01_M_h06.wav|happy

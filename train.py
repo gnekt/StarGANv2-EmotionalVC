@@ -52,8 +52,8 @@ def main(config_path):
     file_handler.setFormatter(logging.Formatter('%(levelname)s:%(asctime)s: %(message)s'))
     logger.addHandler(file_handler)
     
-    batch_size = config.get('batch_size', 2)
-    device = config.get('device', 'cpu')
+    batch_size = config.get('batch_size', 15)
+    device = config.get('device', 'cuda')
     epochs = config.get('epochs', 1000)
     save_freq = config.get('save_freq', 20)
     train_path = config.get('train_data', None)
@@ -64,12 +64,12 @@ def main(config_path):
     # load data
     train_dataloader = build_dataloader(train_path,
                                         batch_size=batch_size,
-                                        num_workers=2,
+                                        num_workers=5,
                                         device=device)
     val_dataloader = build_dataloader(val_path,
                                       batch_size=batch_size,
                                       validation=True,
-                                      num_workers=1,
+                                      num_workers=2,
                                       device=device)
 
     # load pretrained ASR model
@@ -134,7 +134,7 @@ def main(config_path):
                 for v in value:
                     writer.add_figure('eval_spec', v, epoch)
         if (epoch % save_freq) == 0:
-            trainer.save_checkpoint(osp.join(log_dir, 'epoch_%05d.pth' % epoch))
+            trainer.save_checkpoint(osp.join(log_dir, 'epoch.pth'))
     return 0
 
 def get_data_path_list(train_path=None, val_path=None):
