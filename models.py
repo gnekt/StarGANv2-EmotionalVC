@@ -239,7 +239,7 @@ class Generator(nn.Module):
 
 
 class MappingNetwork(nn.Module):
-    def __init__(self, latent_dim=16, style_dim=48, num_domains=2, hidden_dim=384):
+    def __init__(self, latent_dim=16, style_dim=48, num_domains=3, hidden_dim=384):
         super().__init__()
         layers = []
         layers += [nn.Linear(latent_dim, hidden_dim)]
@@ -271,7 +271,7 @@ class MappingNetwork(nn.Module):
 
 
 class StyleEncoder(nn.Module):
-    def __init__(self, dim_in=48, style_dim=48, num_domains=2, max_conv_dim=384):
+    def __init__(self, dim_in=48, style_dim=48, num_domains=3, max_conv_dim=384):
         super().__init__()
         blocks = []
         blocks += [nn.Conv2d(1, dim_in, 3, 1, 1)]
@@ -307,7 +307,7 @@ class StyleEncoder(nn.Module):
         return s
 
 class Discriminator(nn.Module):
-    def __init__(self, dim_in=48, num_domains=2, max_conv_dim=384, repeat_num=4):
+    def __init__(self, dim_in=48, num_domains=3, max_conv_dim=384, repeat_num=4):
         super().__init__()
         
         # real/fake discriminator
@@ -338,7 +338,7 @@ class LinearNorm(torch.nn.Module):
         return self.linear_layer(x)
 
 class Discriminator2d(nn.Module):
-    def __init__(self, dim_in=48, num_domains=2, max_conv_dim=384, repeat_num=4):
+    def __init__(self, dim_in=48, num_domains=3, max_conv_dim=384, repeat_num=4):
         super().__init__()
         blocks = []
         blocks += [nn.Conv2d(1, dim_in, 3, 1, 1)]

@@ -85,13 +85,13 @@ class MelDataset(torch.utils.data.Dataset):
         if self.dataset.iloc[idx]["already_used"]:
             raise IndexError("")
         row = self.dataset.iloc[idx]
-        emotion = row["emotion"]
+        emotion = row["reference_emotion"]
         self.dataset.iloc[idx]["already_used"] = True
         mel_tensor, label = self._load_data(row["source_path"])
         ref_mel_tensor, ref_label = self._load_data(row["reference_path"],emotion_map[row["reference_emotion"]])
         
-        ref2 = self.dataset[self.dataset["emotion"] == emotion].sample(n=1)
-        ref2_mel_tensor = self._load_data(ref2["reference_path"])
+        ref2 = self.dataset[self.dataset["reference_emotion"] == emotion].sample(n=1).iloc[0]
+        ref2_mel_tensor, ref2_mel_label = self._load_data(ref2["reference_path"])
         return mel_tensor, label, ref_mel_tensor, ref2_mel_tensor, ref_label
     
     def _load_data(self, wav_path: str, label: int = emotion_map["neutral"]):
