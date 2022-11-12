@@ -40,7 +40,7 @@ torch.backends.cudnn.benchmark = True #
 
 def main(config_path):
     config = yaml.safe_load(open(config_path))
-
+    print(config)
     log_dir = config['log_dir']
     if not osp.exists(log_dir): os.makedirs(log_dir, exist_ok=True)
     shutil.copy(config_path, osp.join(log_dir, osp.basename(config_path)))
@@ -52,27 +52,23 @@ def main(config_path):
     file_handler.setFormatter(logging.Formatter('%(levelname)s:%(asctime)s: %(message)s'))
     logger.addHandler(file_handler)
     
+    ### Get configuration
     batch_size = config.get('batch_size', 2)
     device = config.get('device', 'cpu')
     epochs = config.get('epochs', 1000)
     save_freq = config.get('save_freq', 20)
-    train_path = config.get('train_data', None)
-    val_path = config.get('val_data', None)
+    dataset_configuration = config.get('dataset_configuration', None)
     stage = config.get('stage', 'star')
     fp16_run = config.get('fp16_run', False)
+    ###
     
-    # load data
-    train_dataloader = build_dataloader(train_path,
+    # load dataloader 
+    train_dataloader, val_dataloader = build_dataloader(dataset_configuration,
                                         batch_size=batch_size,
                                         num_workers=2,
                                         device=device)
-    val_dataloader = build_dataloader(val_path,
-                                      batch_size=batch_size,
-                                      validation=True,
-                                      num_workers=1,
-                                      device=device)
 
-    # load pretrained ASR model
+    # load pretrained ASR model, FROZEN
     ASR_config = config.get('ASR_config', False)
     ASR_path = config.get('ASR_path', False)
     with open(ASR_config) as f:
@@ -81,7 +77,7 @@ def main(config_path):
     ASR_model = ASRCNN(**ASR_model_config)
     params = torch.load(ASR_path, map_location='cpu')['model']
     ASR_model.load_state_dict(params)
-    _ = ASR_model.eval()
+    _ = ASR_model.eval()    
     
     # load pretrained F0 model
     F0_path = config.get('F0_path', False)
@@ -136,19 +132,6 @@ def main(config_path):
         if (epoch % save_freq) == 0:
             trainer.save_checkpoint(osp.join(log_dir, 'epoch_%05d.pth' % epoch))
     return 0
-
-def get_data_path_list(train_path=None, val_path=None):
-    if train_path is None:
-        train_path = "Data/train_list.txt"
-    if val_path is None:
-        val_path = "Data/val_list.txt"
-
-    with open(train_path, 'r') as f:
-        train_list = f.readlines()
-    with open(val_path, 'r') as f:
-        val_list = f.readlines()
-
-    return train_list, val_list
 
 if __name__=="__main__":
     main()

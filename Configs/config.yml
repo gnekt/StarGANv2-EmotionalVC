@@ -7,8 +7,12 @@ pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
-train_data: "Data/train_list.txt"
-val_data: "Data/val_list.txt"
+dataset_configuration:
+  source_file: "Data/dataset.txt"
+  data_separetor: "|"
+  data_header: ["actor_id","statement_id","source_path","reference_path","reference_emotion"]
+  trainining_set_percentage: 80
+  validation_set_percentage: 20
 
 F0_path: "Utils/JDC/bst.t7"
 ASR_config: "Utils/ASR/config.yml"

@@ -43,7 +43,7 @@ class MelDataset(torch.utils.data.Dataset):
     """    
     
     def __init__(self,
-                 dataset_path: str,
+                 dataset: pd.DataFrame,
                  sr=24000,
                  validation=False,
                  sep="|"                 
@@ -51,7 +51,7 @@ class MelDataset(torch.utils.data.Dataset):
         """_summary_
 
         Args:
-            dataset_path (str): _description_
+            dataset (pd.DataFrame): Source Dataframe
             sr (int, optional): _description_. Defaults to 24000.
             validation (bool, optional): _description_. Defaults to False.
             sep (str, optional): _description_. Defaults to ";".
@@ -63,7 +63,7 @@ class MelDataset(torch.utils.data.Dataset):
         logger.info(f"MelDataset:__init__: Check existence of dataset path..")
         
         logger.info(f"MelDataset:__init__: Load dataset into a dataframe object..")
-        self.dataset = pd.read_csv(dataset_path, sep=sep, names=["source_path","reference_path","reference_emotion"])
+        self.dataset = dataset
         self.dataset["already_used"] = False
          
         logger.info(f"MelDataset:__init__: Ok.")
@@ -85,12 +85,13 @@ class MelDataset(torch.utils.data.Dataset):
         if self.dataset.iloc[idx]["already_used"]:
             raise IndexError("")
         row = self.dataset.iloc[idx]
+        emotion = row["emotion"]
         self.dataset.iloc[idx]["already_used"] = True
         mel_tensor, label = self._load_data(row["source_path"])
         ref_mel_tensor, ref_label = self._load_data(row["reference_path"],emotion_map[row["reference_emotion"]])
-        # In emotion embedding the speaker is not important, instead emotion is.
-        # Style diversification loss is ambiguous in our task, a way to keep it forgettable without change a lot of code could be this way
-        ref2_mel_tensor = ref_mel_tensor
+        
+        ref2 = self.dataset[self.dataset["emotion"] == emotion].sample(n=1)
+        ref2_mel_tensor = self._load_data(ref2["reference_path"])
         return mel_tensor, label, ref_mel_tensor, ref2_mel_tensor, ref_label
     
     def _load_data(self, wav_path: str, label: int = emotion_map["neutral"]):
@@ -181,22 +182,62 @@ class Collater(object):
         mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1)
         return mels, labels, ref_mels, ref2_mels, ref_labels, z_trg, z_trg2
 
-def build_dataloader(path_list,
-                     validation=False,
+def build_dataloader(dataset_configuration,
                      batch_size=4,
                      num_workers=1,
                      device='cpu',
-                     collate_config={},
-                     dataset_config={}):
+                     collate_config={}):
+    """_summary_
 
-    dataset = MelDataset(path_list, validation=validation)
+    Args:
+        dataset_configuration (_type_): _description_
+        batch_size (int, optional): _description_. Defaults to 4.
+        num_workers (int, optional): _description_. Defaults to 1.
+        device (str, optional): _description_. Defaults to 'cpu'.
+        collate_config (dict, optional): _description_. Defaults to {}.
+
+    Returns:
+        _type_: _description_
+    """
+        
+    # Get Dataset info
+    dataset_path = dataset_configuration["source_file"]
+    separetor = dataset_configuration["data_separetor"]
+    data_header = dataset_configuration["data_header"]
+    train_set_percentage = dataset_configuration["training_set_percentage"]
+    validation_set_percentage = dataset_configuration["validation_set_percentage"]
+    ####
+    
+    if not os.path.exists(dataset_path):
+        raise FileNotFoundError(f"Check path! {dataset_path} does not exist!")
+    
+    # Obtain Train e Validation set according to a percentage
+    complete_dataset = pd.read_csv(dataset_path, sep=separetor, names=data_header)
+    complete_dataset = complete_dataset.sample(frac=1)
+    training_dataset = complete_dataset.iloc[:int((complete_dataset.shape[0]*train_set_percentage)/100)]
+    partial_dataset = complete_dataset.drop(training_dataset.index)
+    validation_dataset = partial_dataset.iloc[:int((complete_dataset.shape[0]*validation_set_percentage)/100)]
+    ####
+    
+    train_dataset = MelDataset(training_dataset)
+    validation_dataset = MelDataset(validation_dataset)
+    
     collate_fn = Collater(**collate_config)
-    data_loader = DataLoader(dataset,
+    
+    training_data_loader = DataLoader(train_dataset,
                              batch_size=batch_size,
-                             shuffle=(not validation),
+                             shuffle=True,
+                             num_workers=num_workers,
+                             drop_last=True,
+                             collate_fn=collate_fn,
+                             pin_memory=(device != 'cpu'))
+    
+    validation_data_loader = DataLoader(validation_dataset,
+                             batch_size=batch_size,
+                             shuffle=True,
                              num_workers=num_workers,
                              drop_last=True,
                              collate_fn=collate_fn,
                              pin_memory=(device != 'cpu'))
 
-    return data_loader
+    return training_data_loader, validation_data_loader
