@@ -197,6 +197,7 @@ def adv_loss(logits, target):
     if len(logits.shape) > 1:
         logits = logits.reshape(-1)
     targets = torch.full_like(logits, fill_value=target)
+    logits = logits.clamp(min=-10, max=10) # prevent nan
     loss = F.binary_cross_entropy_with_logits(logits, targets)
     return loss
 
