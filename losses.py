@@ -11,6 +11,23 @@ import torch.nn.functional as F
 import numpy as np
 
 def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use_r1_reg=True, use_adv_cls=False, use_con_reg=False):
+    """_summary_
+
+    Args:
+        nets (_type_): _description_
+        args (_type_): _description_
+        x_real (_type_): (Batch, 1, NMels, Mel_Dim)
+        y_org (_type_): (Batch) Source Emotion label, in our case always Neutral
+        y_trg (_type_): (Batch) Target Emotion label
+        z_trg (_type_, optional): (Batch, Latent_Dim). Defaults to None.
+        x_ref ((Batch, 1, NMels, Mel_Dim), optional): _description_. Defaults to None.
+        use_r1_reg (bool, optional): _description_. Defaults to True.
+        use_adv_cls (bool, optional): _description_. Defaults to False.
+        use_con_reg (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """    
     args = Munch(args)
 
     assert (z_trg is None) != (x_ref is None)
@@ -180,7 +197,6 @@ def adv_loss(logits, target):
     if len(logits.shape) > 1:
         logits = logits.reshape(-1)
     targets = torch.full_like(logits, fill_value=target)
-    logits = logits.clamp(min=-10, max=10) # prevent nan
     loss = F.binary_cross_entropy_with_logits(logits, targets)
     return loss
 

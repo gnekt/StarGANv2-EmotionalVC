@@ -162,7 +162,7 @@ class Collater(object):
         ref_labels = torch.zeros((batch_size)).long()
 
         for bid, (mel, label, ref_mel, ref2_mel, ref_label) in enumerate(batch):
-            mel_size = mel.size(1)
+            mel_size = mel.size(1) 
             mels[bid, :, :mel_size] = mel
             
             ref_mel_size = ref_mel.size(1)
@@ -175,9 +175,7 @@ class Collater(object):
             ref_labels[bid] = ref_label
 
         z_trg = torch.randn(batch_size, self.latent_dim)
-        # In emotion embedding the speaker is not important, instead emotion is.
-        # Style diversification loss is ambiguous in our task, a way to keep it forgettable without change a lot of code could be this way
-        z_trg2 = z_trg
+        z_trg2 = torch.randn(batch_size, self.latent_dim)
         
         mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1)
         return mels, labels, ref_mels, ref2_mels, ref_labels, z_trg, z_trg2

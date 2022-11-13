@@ -356,11 +356,28 @@ class Discriminator2d(nn.Module):
         self.main = nn.Sequential(*blocks)
 
     def get_feature(self, x):
+        """_summary_
+
+        Args:
+            x (Batch,1,NMels,Mel_Dim): _description_
+
+        Returns:
+            _type_: _description_
+        """  
         out = self.main(x)
         out = out.view(out.size(0), -1)  # (batch, num_domains)
         return out
 
     def forward(self, x, y):
+        """_summary_
+
+        Args:
+            x (Batch,1,NMels,Mel_Dim): _description_
+            y (Batch): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         out = self.get_feature(x)
         idx = torch.LongTensor(range(y.size(0))).to(y.device)
         out = out[idx, y]  # (batch)
