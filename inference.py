@@ -13,6 +13,7 @@ from Utils.JDC.model import JDCNet
 from models import Generator, MappingNetwork, StyleEncoder
 from dataset_maker.emotion_mapping import emotion_map
 import soundfile as sf
+import random 
 
 EMOTION_LABEL=[id for id,value in emotion_map.items()]
 MDOEL_PATH='Models/Experiment-2/epoch_00020.pth'
@@ -93,14 +94,12 @@ starganv2.mapping_network = starganv2.mapping_network.to(DEVICE)
 starganv2.generator = starganv2.generator.to(DEVICE)
 
 # load input wave
-print()
 audio, source_sr = librosa.load(DEMO_PATH, sr=SAMPLE_RATE)
 audio = audio / np.max(np.abs(audio))
 audio.dtype = np.float32
 
 # with reference, using style encoder
 emotion_ref={}
-print(emotion_map)
 for index,val in emotion_map.items():
     print(index)
     if index=="neutral": continue
@@ -148,6 +147,7 @@ print('total processing time: %.3f sec' % (end - start) )
 
 for key, wave in converted_samples.items():
     emotion=EMOTION_LABEL[key]
+    rnd_number=random.randint(1,999)+random.randint(1,999)
     print('Converted: %s' % key)
     print("storing sample..")
-    sf.write(f'./Demo/out/{emotion}/{emotion}.wav', wave, SAMPLE_RATE)
+    sf.write(f'./Demo/out/{emotion}/{rnd_number}.wav', wave, SAMPLE_RATE)
