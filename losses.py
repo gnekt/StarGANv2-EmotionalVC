@@ -24,7 +24,6 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use
         use_r1_reg (bool, optional): _description_. Defaults to True.
         use_adv_cls (bool, optional): _description_. Defaults to False.
         use_con_reg (bool, optional): _description_. Defaults to False.
-
     Returns:
         _type_: _description_
     """    

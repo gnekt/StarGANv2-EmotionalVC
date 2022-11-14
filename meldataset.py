@@ -87,8 +87,8 @@ class MelDataset(torch.utils.data.Dataset):
         row = self.dataset.iloc[idx]
         emotion = row["reference_emotion"]
         self.dataset.iloc[idx]["already_used"] = True
-        mel_tensor, label = self._load_data(row["source_path"])
-        ref_mel_tensor, ref_label = self._load_data(row["reference_path"],emotion_map[row["reference_emotion"]])
+        mel_tensor, label = self._load_data(row["source_path"], row["source_emotion"])
+        ref_mel_tensor, ref_label = self._load_data(row["reference_path"],row["reference_emotion"])
         
         ref2 = self.dataset[self.dataset["reference_emotion"] == emotion].sample(n=1).iloc[0]
         ref2_mel_tensor, ref2_mel_label = self._load_data(ref2["reference_path"])
