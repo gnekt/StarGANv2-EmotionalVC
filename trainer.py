@@ -163,19 +163,8 @@ class Trainer(object):
 
             ### load data
             batch = [b.to(self.device) for b in batch]
-            x_real, y_org, x_ref, x_ref2, y_trg, z_trg, z_trg2 = batch
+            x_real, y_org, x_ref, x_ref2, y_trg = batch
             
-            # train the discriminator (by random reference)
-            self.optimizer.zero_grad()
-            if scaler is not None:
-                with torch.cuda.amp.autocast():
-                    d_loss, d_losses_latent = compute_d_loss(self.model, self.args.d_loss, x_real, y_org, y_trg, z_trg=z_trg, use_adv_cls=use_adv_cls, use_con_reg=use_con_reg)
-                scaler.scale(d_loss).backward()
-            else:
-                d_loss, d_losses_latent = compute_d_loss(self.model, self.args.d_loss, x_real, y_org, y_trg, z_trg=z_trg, use_adv_cls=use_adv_cls, use_con_reg=use_con_reg)
-                d_loss.backward()
-            self.optimizer.step('discriminator', scaler=scaler)
-
             # train the discriminator (by target reference)
             self.optimizer.zero_grad()
             if scaler is not None:
@@ -187,22 +176,8 @@ class Trainer(object):
                 d_loss.backward()
 
             self.optimizer.step('discriminator', scaler=scaler)
-
-            # train the generator (by random reference)
-            self.optimizer.zero_grad()
-            if scaler is not None:
-                with torch.cuda.amp.autocast():
-                    g_loss, g_losses_latent = compute_g_loss(
-                        self.model, self.args.g_loss, x_real, y_org, y_trg, z_trgs=[z_trg, z_trg2], use_adv_cls=use_adv_cls)
-                scaler.scale(g_loss).backward()
-            else:
-                g_loss, g_losses_latent = compute_g_loss(
-                    self.model, self.args.g_loss, x_real, y_org, y_trg, z_trgs=[z_trg, z_trg2], use_adv_cls=use_adv_cls)
-                g_loss.backward()
-
             self.optimizer.step('generator', scaler=scaler)
-            self.optimizer.step('mapping_network', scaler=scaler)
-            self.optimizer.step('style_encoder', scaler=scaler)
+            self.optimizer.step('emotion_encoder', scaler=scaler)
 
             # train the generator (by target reference)
             self.optimizer.zero_grad()
@@ -219,16 +194,14 @@ class Trainer(object):
 
             # compute moving average of network parameters
             self.moving_average(self.model.generator, self.model_ema.generator, beta=0.999)
-            self.moving_average(self.model.mapping_network, self.model_ema.mapping_network, beta=0.999)
-            self.moving_average(self.model.style_encoder, self.model_ema.style_encoder, beta=0.999)
+            self.moving_average(self.model.emotion_encoder, self.model_ema.emotion_encoder, beta=0.999)
             self.optimizer.scheduler()
 
-            for key in d_losses_latent:
-                train_losses["train/%s" % key].append(d_losses_latent[key])
-            for key in g_losses_latent:
-                train_losses["train/%s" % key].append(g_losses_latent[key])
-
-
+            for key in d_losses_ref:
+                train_losses["train/%s" % key].append(d_losses_ref[key])
+            for key in g_losses_ref:
+                train_losses["train/%s" % key].append(g_losses_ref[key])
+                
         train_losses = {key: np.mean(value) for key, value in train_losses.items()}
         return train_losses
 
@@ -243,24 +216,20 @@ class Trainer(object):
 
             ### load data
             batch = [b.to(self.device) for b in batch]
-            x_real, y_org, x_ref, x_ref2, y_trg, z_trg, z_trg2 = batch
+            x_real, y_org, x_ref, x_ref2, y_trg = batch
 
             # train the discriminator
-            d_loss, d_losses_latent = compute_d_loss(
-                self.model, self.args.d_loss, x_real, y_org, y_trg, z_trg=z_trg, use_r1_reg=False, use_adv_cls=use_adv_cls)
             d_loss, d_losses_ref = compute_d_loss(
                 self.model, self.args.d_loss, x_real, y_org, y_trg, x_ref=x_ref, use_r1_reg=False, use_adv_cls=use_adv_cls)
 
             # train the generator
-            g_loss, g_losses_latent = compute_g_loss(
-                self.model, self.args.g_loss, x_real, y_org, y_trg, z_trgs=[z_trg, z_trg2], use_adv_cls=use_adv_cls)
             g_loss, g_losses_ref = compute_g_loss(
                 self.model, self.args.g_loss, x_real, y_org, y_trg, x_refs=[x_ref, x_ref2], use_adv_cls=use_adv_cls)
 
-            for key in d_losses_latent:
-                eval_losses["eval/%s" % key].append(d_losses_latent[key])
-            for key in g_losses_latent:
-                eval_losses["eval/%s" % key].append(g_losses_latent[key])
+            for key in d_losses_ref:
+                eval_losses["eval/%s" % key].append(d_losses_ref[key])
+            for key in g_losses_ref:
+                eval_losses["eval/%s" % key].append(g_losses_ref[key])
 
 #             if eval_steps_per_epoch % 10 == 0:
 #                 # generate x_fake

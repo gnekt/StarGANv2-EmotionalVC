@@ -1,4 +1,7 @@
-# load packages
+#!/usr/bin/env python3
+#coding:utf-8
+
+from torch.utils.tensorboard import SummaryWriter
 import random
 import yaml
 from munch import Munch
@@ -14,14 +17,28 @@ from models import Generator, EmotionEncoder
 from dataset_maker.emotion_mapping import emotion_map
 import soundfile as sf
 import random 
+from meldataset import build_dataloader
 
 EMOTION_LABEL=[id for id,value in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-2/epoch_00040.pth'
+MDOEL_PATH='Models/Experiment-1/epoch_00000.pth'
 DEMO_PATH='Demo/neutral.mp3'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
 DEVICE="cuda"
+LOG_DIR="test"
 
+config = yaml.safe_load(open("./Configs/config.yml"))
+
+### Get configuration
+batch_size = config.get('batch_size', 2)
+device = config.get('device', 'cpu')
+epochs = config.get('epochs', 1000)
+save_freq = config.get('save_freq', 20)
+dataset_configuration = config.get('dataset_configuration', None)
+stage = config.get('stage', 'star')
+fp16_run = config.get('fp16_run', False)
+###
+    
 print("Start inference..")
 to_mel = torchaudio.transforms.MelSpectrogram(
     n_mels=80, n_fft=2048, win_length=1200, hop_length=300)
@@ -64,7 +81,9 @@ def compute_style(speaker_dicts):
     
     return reference_embeddings
 
-# load F0 model
+writer = SummaryWriter(LOG_DIR + "/tensorboard/emotion_encoder_representation")
+
+## load F0 model
 print("Load f0 model..")
 F0_model = JDCNet(num_class=1, seq_len=192)
 params = torch.load("Utils/JDC/bst.t7")['net']
@@ -80,7 +99,7 @@ vocoder.remove_weight_norm()
 _ = vocoder.eval()
 
 print("Load neural model..")
-with open('Models/Experiment-2/config.yml') as f:
+with open('Models/Experiment-1/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
 params = torch.load(MDOEL_PATH, map_location='cpu')
@@ -90,61 +109,16 @@ _ = [starganv2[key].eval() for key in starganv2]
 starganv2.emotion_encoder = starganv2.emotion_encoder.to(DEVICE)
 starganv2.generator = starganv2.generator.to(DEVICE)
 
-# load input wave
-audio, source_sr = librosa.load(DEMO_PATH, sr=SAMPLE_RATE)
-audio = audio / np.max(np.abs(audio))
-audio.dtype = np.float32
+# load dataloader 
+train_dataloader, val_dataloader = build_dataloader(dataset_configuration,
+                                    batch_size=batch_size,
+                                    num_workers=2,
+                                    device=device)
 
-# with reference, using style encoder
-emotion_ref={}
-for index,val in emotion_map.items():
-    print(index)
-    if index=="neutral": continue
-    emotion_ref[val] = (f'Demo/emotion_sample/{index}/{index}.wav', val)
-
-reference_embeddings = compute_style(emotion_ref)
-
-
-# conversion 
-import time
-start = time.time()
-    
-source = preprocess(audio).to(DEVICE)
-keys = []
-converted_samples = {}
-reconstructed_samples = {}
-converted_mels = {}
-
-for key, (ref, _) in reference_embeddings.items():
-    with torch.no_grad():
-        f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-        out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
-        
-        c = out.transpose(-1, -2).squeeze().to(DEVICE)
-        y_out = vocoder.inference(c)
-        y_out = y_out.view(-1).cpu()
-
-        if key not in emotion_ref or emotion_ref[key][0] == "":
-            recon = None
-        else:
-            wave, sr = librosa.load(emotion_ref[key][0], sr=SAMPLE_RATE)
-            mel = preprocess(wave)
-            c = mel.transpose(-1, -2).squeeze().to(DEVICE)
-            recon = vocoder.inference(c)
-            recon = recon.view(-1).cpu().numpy()
-
-    converted_samples[key] = y_out.numpy()
-    reconstructed_samples[key] = recon
-
-    converted_mels[key] = out
-    
-    keys.append(key)
-end = time.time()
-print('total processing time: %.3f sec' % (end - start) )
-
-for key, wave in converted_samples.items():
-    emotion=EMOTION_LABEL[key]
-    rnd_number=random.randint(1,999)+random.randint(1,999)
-    print('Converted: %s' % key)
-    print("storing sample..")
-    sf.write(f'./Demo/out/{emotion}/{rnd_number}.wav', wave, SAMPLE_RATE)
+for train_steps_per_epoch, batch in enumerate(train_dataloader):
+    x_real, y_org, x_ref, x_ref2, y_trg, z_trg, z_trg2 = batch
+    # create grid of images
+    # img_grid = writer.audio("audio", x_real)
+    writer.add_graph(starganv2.emotion_encoder, [x_ref.to(DEVICE), y_trg.to(DEVICE)])
+    writer.close()
+    break

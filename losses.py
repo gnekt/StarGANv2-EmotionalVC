@@ -10,7 +10,7 @@ from transforms import build_transforms
 import torch.nn.functional as F
 import numpy as np
 
-def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use_r1_reg=True, use_adv_cls=False, use_con_reg=False):
+def compute_d_loss(nets, args, x_real, y_org, y_trg, x_ref=None, use_r1_reg=True, use_adv_cls=False, use_con_reg=False):
     """_summary_
 
     Args:
@@ -19,7 +19,6 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use
         x_real (_type_): (Batch, 1, NMels, Mel_Dim)
         y_org (_type_): (Batch) Source Emotion label, in our case always Neutral
         y_trg (_type_): (Batch) Target Emotion label
-        z_trg (_type_, optional): (Batch, Latent_Dim). Defaults to None.
         x_ref ((Batch, 1, NMels, Mel_Dim), optional): _description_. Defaults to None.
         use_r1_reg (bool, optional): _description_. Defaults to True.
         use_adv_cls (bool, optional): _description_. Defaults to False.
@@ -29,7 +28,7 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use
     """    
     args = Munch(args)
 
-    assert (z_trg is None) != (x_ref is None)
+    assert x_ref is not None
     # with real audios
     x_real.requires_grad_()
     out = nets.discriminator(x_real, y_org)
@@ -50,10 +49,7 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use
     
     # with fake audios
     with torch.no_grad():
-        if z_trg is not None:
-            s_trg = nets.mapping_network(z_trg, y_trg)
-        else:  # x_ref is not None
-            s_trg = nets.style_encoder(x_ref, y_trg)
+        s_trg = nets.emotion_encoder(x_ref, y_trg)
             
         F0 = nets.f0_model.get_feature_GAN(x_real)
         x_fake = nets.generator(x_real, s_trg, masks=None, F0=F0)
@@ -84,20 +80,13 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, z_trg=None, x_ref=None, use
                        real_adv_cls=loss_real_adv_cls.item(),
                        con_reg=loss_con_reg.item())
 
-def compute_g_loss(nets, args, x_real, y_org, y_trg, z_trgs=None, x_refs=None, use_adv_cls=False):
+def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=False):
     args = Munch(args)
-    
-    assert (z_trgs is None) != (x_refs is None)
-    if z_trgs is not None:
-        z_trg, z_trg2 = z_trgs
-    if x_refs is not None:
-        x_ref, x_ref2 = x_refs
+
+    x_ref, x_ref2 = x_refs
         
     # compute style vectors
-    if z_trgs is not None:
-        s_trg = nets.mapping_network(z_trg, y_trg)
-    else:
-        s_trg = nets.style_encoder(x_ref, y_trg)
+    s_trg = nets.emotion_encoder(x_ref, y_trg)
     
     # compute ASR/F0 features (real)
     with torch.no_grad():
@@ -132,14 +121,11 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, z_trgs=None, x_refs=None, u
     loss_asr = F.smooth_l1_loss(ASR_fake, ASR_real)
     
     # style reconstruction loss
-    s_pred = nets.style_encoder(x_fake, y_trg)
+    s_pred = nets.emotion_encoder(x_fake, y_trg)
     loss_sty = torch.mean(torch.abs(s_pred - s_trg))
     
     # diversity sensitive loss
-    if z_trgs is not None:
-        s_trg2 = nets.mapping_network(z_trg2, y_trg)
-    else:
-        s_trg2 = nets.style_encoder(x_ref2, y_trg)
+    s_trg2 = nets.emotion_encoder(x_ref2, y_trg)
     x_fake2 = nets.generator(x_real, s_trg2, masks=None, F0=GAN_F0_real)
     x_fake2 = x_fake2.detach()
     _, GAN_F0_fake2, _ = nets.f0_model(x_fake2)
@@ -147,7 +133,7 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, z_trgs=None, x_refs=None, u
     loss_ds += F.smooth_l1_loss(GAN_F0_fake, GAN_F0_fake2.detach())
     
     # cycle-consistency loss
-    s_org = nets.style_encoder(x_real, y_org)
+    s_org = nets.emotion_encoder(x_real, y_org)
     x_rec = nets.generator(x_fake, s_org, masks=None, F0=GAN_F0_fake)
     loss_cyc = torch.mean(torch.abs(x_rec - x_real))
     # F0 loss in cycle-consistency loss

@@ -65,7 +65,7 @@ def main(config_path):
     # load dataloader 
     train_dataloader, val_dataloader = build_dataloader(dataset_configuration,
                                         batch_size=batch_size,
-                                        num_workers=2,
+                                        num_workers=1,
                                         device=device)
 
     # load pretrained ASR model, FROZEN
@@ -98,7 +98,6 @@ def main(config_path):
     _ = [model[key].to(device) for key in model]
     _ = [model_ema[key].to(device) for key in model_ema]
     scheduler_params_dict = {key: scheduler_params.copy() for key in model}
-    scheduler_params_dict['mapping_network']['max_lr'] = 2e-6
     optimizer = build_optimizer({key: model[key].parameters() for key in model},
                                       scheduler_params_dict=scheduler_params_dict)
 

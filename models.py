@@ -237,74 +237,62 @@ class Generator(nn.Module):
 
         return self.to_out(x)
 
-
-class MappingNetwork(nn.Module):
-    def __init__(self, latent_dim=16, style_dim=48, num_domains=3, hidden_dim=384):
-        super().__init__()
-        layers = []
-        layers += [nn.Linear(latent_dim, hidden_dim)]
-        layers += [nn.ReLU()]
-        for _ in range(3):
-            layers += [nn.Linear(hidden_dim, hidden_dim)]
-            layers += [nn.ReLU()]
-        self.shared = nn.Sequential(*layers)
-
-        self.unshared = nn.ModuleList()
-        for _ in range(num_domains):
-            self.unshared += [nn.Sequential(nn.Linear(hidden_dim, hidden_dim),
-                                            nn.ReLU(),
-                                            nn.Linear(hidden_dim, hidden_dim),
-                                            nn.ReLU(),
-                                            nn.Linear(hidden_dim, hidden_dim),
-                                            nn.ReLU(),
-                                            nn.Linear(hidden_dim, style_dim))]
-
-    def forward(self, z, y):
-        h = self.shared(z)
-        out = []
-        for layer in self.unshared:
-            out += [layer(h)]
-        out = torch.stack(out, dim=1)  # (batch, num_domains, style_dim)
-        idx = torch.LongTensor(range(y.size(0))).to(y.device)
-        s = out[idx, y]  # (batch, style_dim)
-        return s
-
-
-class StyleEncoder(nn.Module):
+class EmotionEncoder(nn.Module):
     def __init__(self, dim_in=48, style_dim=48, num_domains=3, max_conv_dim=384):
         super().__init__()
         blocks = []
         blocks += [nn.Conv2d(1, dim_in, 3, 1, 1)]
 
-        repeat_num = 4
+        repeat_num = 3
+        # 3 ResBlk with downsampling that preserve time 
         for _ in range(repeat_num):
             dim_out = min(dim_in*2, max_conv_dim)
-            blocks += [ResBlk(dim_in, dim_out, downsample='half')]
+            blocks += [ResBlk(dim_in, dim_out, downsample='timepreserve')]
             dim_in = dim_out
-
+        
+        dim_in=dim_out
+        dim_out = min(dim_in*2, max_conv_dim)
+        blocks += [ResBlk(dim_in, dim_out, downsample='half')]
         blocks += [nn.LeakyReLU(0.2)]
-        blocks += [nn.Conv2d(dim_out, dim_out, 5, 1, 0)]
-        blocks += [nn.AdaptiveAvgPool2d(1)]
-        blocks += [nn.LeakyReLU(0.2)]
+        blocks += [nn.AdaptiveAvgPool2d((1,None))]
         self.shared = nn.Sequential(*blocks)
-
-        self.unshared = nn.ModuleList()
-        for _ in range(num_domains):
-            self.unshared += [nn.Linear(dim_out, style_dim)]
-
+        self.emotion_fc = nn.Linear(4, 254)
+        self.emotion_fc_out = nn.Sigmoid()
+        self.lstm = nn.LSTM(96, 254, bidirectional=True, batch_first=True)
+        self.b1_fc = nn.Linear(254, 127)
+        self.b1_fc_out = nn.Sigmoid()
+        self.b2_fc = nn.Linear(254, 127)
+        self.b2_fc_out = nn.Sigmoid()
+        self.encoder_fc = nn.Linear(127, style_dim)
+        self.encoder_fc_out = nn.Sigmoid()
+        
     def forward(self, x, y):
+        """_summary_
+
+        Args:
+            x (Batch,1,NMels,MelDim): _description_
+            y (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
+        y = F.one_hot(torch.arange(0, 4))[y,:].type(torch.FloatTensor).to("cpu")
         h = self.shared(x)
 
-        h = h.view(h.size(0), -1)
-        out = []
+        h = h.squeeze(2) # (Batch, Channels, ChannelDim)
 
-        for layer in self.unshared:
-            out += [layer(h)]
-
-        out = torch.stack(out, dim=1)  # (batch, num_domains, style_dim)
-        idx = torch.LongTensor(range(y.size(0))).to(y.device)
-        s = out[idx, y]  # (batch, style_dim)
-        return s
+        emotion_fc_linear = self.emotion_fc(y)
+        emotion_fc_out = self.emotion_fc_out(emotion_fc_linear)
+        emotion_fc_out = torch.broadcast_to(emotion_fc_out, (2,-1, -1))
+        lstm_out = self.lstm(h,(emotion_fc_out, emotion_fc_out))
+        b1_fc_linear = self.b1_fc(lstm_out[0][:,-1,:254])
+        b2_fc_linear = self.b2_fc(lstm_out[0][:,-1,254:])
+        b1_fc_out = self.b1_fc_out(b1_fc_linear)
+        b2_fc_out = self.b2_fc_out(b2_fc_linear)
+        b1_b2_ = torch.add(b1_fc_out, b2_fc_out)
+        emotion_encoding = self.encoder_fc(b1_b2_)
+        emotion_encoding = self.encoder_fc_out(emotion_encoding)
+        return emotion_encoding
 
 class Discriminator(nn.Module):
     def __init__(self, dim_in=48, num_domains=3, max_conv_dim=384, repeat_num=4):
@@ -386,22 +374,18 @@ class Discriminator2d(nn.Module):
 
 def build_model(args, F0_model, ASR_model):
     generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf, F0_channel=args.F0_channel)
-    mapping_network = MappingNetwork(args.latent_dim, args.style_dim, args.num_domains, hidden_dim=args.max_conv_dim)
-    style_encoder = StyleEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
+    emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     discriminator = Discriminator(args.dim_in, args.num_domains, args.max_conv_dim, args.n_repeat)
     generator_ema = copy.deepcopy(generator)
-    mapping_network_ema = copy.deepcopy(mapping_network)
-    style_encoder_ema = copy.deepcopy(style_encoder)
+    emotion_encoder_ema = copy.deepcopy(emotion_encoder)
         
     nets = Munch(generator=generator,
-                 mapping_network=mapping_network,
-                 style_encoder=style_encoder,
+                 emotion_encoder=emotion_encoder,
                  discriminator=discriminator,
                  f0_model=F0_model,
                  asr_model=ASR_model)
     
     nets_ema = Munch(generator=generator_ema,
-                     mapping_network=mapping_network_ema,
-                     style_encoder=style_encoder_ema)
+                     emotion_encoder=emotion_encoder_ema)
 
     return nets, nets_ema
