@@ -276,14 +276,14 @@ class EmotionEncoder(nn.Module):
         Returns:
             _type_: _description_
         """        
-        y = F.one_hot(torch.arange(0, 4))[y,:].type(torch.FloatTensor).to("cpu")
+        y = F.one_hot(torch.arange(0, 4))[y,:].type(torch.FloatTensor).to("cuda")
         h = self.shared(x)
 
         h = h.squeeze(2) # (Batch, Channels, ChannelDim)
 
         emotion_fc_linear = self.emotion_fc(y)
         emotion_fc_out = self.emotion_fc_out(emotion_fc_linear)
-        emotion_fc_out = torch.broadcast_to(emotion_fc_out, (2,-1, -1))
+        emotion_fc_out = torch.cat((emotion_fc_out.unsqueeze(0),emotion_fc_out.unsqueeze(0)),0)
         lstm_out = self.lstm(h,(emotion_fc_out, emotion_fc_out))
         b1_fc_linear = self.b1_fc(lstm_out[0][:,-1,:254])
         b2_fc_linear = self.b2_fc(lstm_out[0][:,-1,254:])
