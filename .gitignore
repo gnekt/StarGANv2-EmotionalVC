@@ -6,3 +6,6 @@ Vocoder/*
 datasets/*
 Models/*
 *.pyc
+dataset/*
+Demo/*
+Utils/*
