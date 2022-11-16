@@ -65,7 +65,7 @@ def main(config_path):
     # load dataloader 
     train_dataloader, val_dataloader = build_dataloader(dataset_configuration,
                                         batch_size=batch_size,
-                                        num_workers=1,
+                                        num_workers=5,
                                         device=device)
 
     # load pretrained ASR model, FROZEN
