@@ -176,9 +176,7 @@ class Trainer(object):
                 d_loss.backward()
 
             self.optimizer.step('discriminator', scaler=scaler)
-            self.optimizer.step('generator', scaler=scaler)
-            self.optimizer.step('emotion_encoder', scaler=scaler)
-
+            
             # train the generator (by target reference)
             self.optimizer.zero_grad()
             if scaler is not None:
@@ -191,6 +189,7 @@ class Trainer(object):
                     self.model, self.args.g_loss, x_real, y_org, y_trg, x_refs=[x_ref, x_ref2], use_adv_cls=use_adv_cls)
                 g_loss.backward()
             self.optimizer.step('generator', scaler=scaler)
+            self.optimizer.step('emotion_encoder', scaler=scaler)
 
             # compute moving average of network parameters
             self.moving_average(self.model.generator, self.model_ema.generator, beta=0.999)
