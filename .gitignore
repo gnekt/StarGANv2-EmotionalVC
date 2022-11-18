@@ -10,3 +10,4 @@ Models/*
 Demo/*
 *.pyc
 __pycache__/*
+download.ipynb

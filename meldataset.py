@@ -177,7 +177,8 @@ class Collater(object):
         mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1)
         return mels, labels, ref_mels, ref2_mels, ref_labels
 
-def build_dataloader(dataset_configuration,
+def build_dataloader(dataset_path,
+                     dataset_configuration,
                      batch_size=4,
                      num_workers=1,
                      device='cpu',
@@ -196,30 +197,21 @@ def build_dataloader(dataset_configuration,
     """
         
     # Get Dataset info
-    dataset_path = dataset_configuration["source_file"]
     separetor = dataset_configuration["data_separetor"]
     data_header = dataset_configuration["data_header"]
-    train_set_percentage = dataset_configuration["training_set_percentage"]
-    validation_set_percentage = dataset_configuration["validation_set_percentage"]
     ####
     
     if not os.path.exists(dataset_path):
         raise FileNotFoundError(f"Check path! {dataset_path} does not exist!")
     
-    # Obtain Train e Validation set according to a percentage
-    complete_dataset = pd.read_csv(dataset_path, sep=separetor, names=data_header)
-    complete_dataset = complete_dataset.sample(frac=1)
-    training_dataset = complete_dataset.iloc[:int((complete_dataset.shape[0]*train_set_percentage)/100)]
-    partial_dataset = complete_dataset.drop(training_dataset.index)
-    validation_dataset = partial_dataset.iloc[:int((complete_dataset.shape[0]*validation_set_percentage)/100)]
-    ####
     
-    train_dataset = MelDataset(training_dataset)
-    validation_dataset = MelDataset(validation_dataset)
+    dataset = pd.read_csv(dataset_path, sep=separetor, names=data_header)
+
+    dataset = MelDataset(dataset)
     
     collate_fn = Collater(**collate_config)
     
-    training_data_loader = DataLoader(train_dataset,
+    data_loader = DataLoader(dataset,
                              batch_size=batch_size,
                              shuffle=True,
                              num_workers=num_workers,
@@ -227,12 +219,5 @@ def build_dataloader(dataset_configuration,
                              collate_fn=collate_fn,
                              pin_memory=(device != 'cpu'))
     
-    validation_data_loader = DataLoader(validation_dataset,
-                             batch_size=batch_size,
-                             shuffle=True,
-                             num_workers=num_workers,
-                             drop_last=True,
-                             collate_fn=collate_fn,
-                             pin_memory=(device != 'cpu'))
 
-    return training_data_loader, validation_data_loader
+    return data_loader
