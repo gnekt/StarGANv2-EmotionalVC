@@ -63,7 +63,14 @@ def main(config_path):
     ###
     
     # load dataloader 
-    train_dataloader, val_dataloader = build_dataloader(dataset_configuration,
+    train_set_path = "./Data/training_list.txt"
+    validation_set_path = "./Data/validation_list.txt"
+    train_dataloader = build_dataloader(train_set_path,dataset_configuration,
+                                        batch_size=batch_size,
+                                        num_workers=2,
+                                        device=device)
+    
+    val_dataloader = build_dataloader(validation_set_path,dataset_configuration,
                                         batch_size=batch_size,
                                         num_workers=2,
                                         device=device)

@@ -135,8 +135,11 @@ class MelDataset(torch.utils.data.Dataset):
         Returns:
             torch.tensor: tensorial representation of source wav
         """        
-        wave, sr = sf.read(wave_path)
-        wave_tensor = torch.from_numpy(wave).float()
+        try:
+            wave, sr = sf.read(wave_path)
+            wave_tensor = torch.from_numpy(wave).float()
+        except Exception:
+            print("ds")
         return wave_tensor
 
 class Collater(object):
