@@ -8,7 +8,7 @@ load_only_params: false
 fp16_run: true
 
 dataset_configuration:
-  data_separetor: "|"
+  data_separetor: ","
   data_header: ["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"]
 
 F0_path: "Utils/JDC/bst.t7"
