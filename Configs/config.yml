@@ -1,18 +1,15 @@
 log_dir: "Models/Experiment-2"
 save_freq: 10
 device: "cuda"
-epochs: 500
+epochs: 150
 batch_size: 5
 pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
 dataset_configuration:
-  source_file: "Data/dataset.txt"
   data_separetor: "|"
   data_header: ["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"]
-  training_set_percentage: 80
-  validation_set_percentage: 20
 
 F0_path: "Utils/JDC/bst.t7"
 ASR_config: "Utils/ASR/config.yml"
