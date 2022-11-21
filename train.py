@@ -59,10 +59,17 @@ def main(config_path):
     dataset_configuration = config.get('dataset_configuration', None)
     stage = config.get('stage', 'star')
     fp16_run = config.get('fp16_run', False)
+    training_path = config.get('training_path', "Data/training_list.txt")
+    validation_path = config.get('validation_path', "Data/validation_list.txt" )
     ###
     
     # load dataloader 
-    train_dataloader, val_dataloader = build_dataloader(dataset_configuration,
+    train_dataloader = build_dataloader(training_path,dataset_configuration,
+                                        batch_size=batch_size,
+                                        num_workers=5,
+                                        device=device)
+    
+    val_dataloader = build_dataloader(validation_path,dataset_configuration,
                                         batch_size=batch_size,
                                         num_workers=5,
                                         device=device)
