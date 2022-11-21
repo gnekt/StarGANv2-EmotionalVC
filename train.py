@@ -33,19 +33,18 @@ handler = StreamHandler()
 handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 
-torch.backends.cudnn.benchmark = True #
+################################################
+config_path="Configs/config.yml"
+torch.backends.cudnn.benchmark = True 
+################################################
 
-@click.command()
-@click.option('-p', '--config_path', default='Configs/config.yml', type=str)
-
-def main(config_path):
+def main():
     config = yaml.safe_load(open(config_path))
     print(config)
     log_dir = config['log_dir']
     if not osp.exists(log_dir): os.makedirs(log_dir, exist_ok=True)
     shutil.copy(config_path, osp.join(log_dir, osp.basename(config_path)))
     writer = SummaryWriter(log_dir + "/tensorboard")
-
     # write logs
     file_handler = logging.FileHandler(osp.join(log_dir, 'train.log'))
     file_handler.setLevel(logging.DEBUG)
@@ -60,25 +59,20 @@ def main(config_path):
     dataset_configuration = config.get('dataset_configuration', None)
     stage = config.get('stage', 'star')
     fp16_run = config.get('fp16_run', False)
+    training_path = config.get('training_path', "Data/training_list.txt")
+    validation_path = config.get('validation_path', "Data/validation_list.txt" )
     ###
     
     # load dataloader 
-    train_set_path = "./Data/training_list.txt"
-    validation_set_path = "./Data/validation_list.txt"
-    train_dataloader = build_dataloader(train_set_path,dataset_configuration,
+    train_dataloader = build_dataloader(training_path,dataset_configuration,
                                         batch_size=batch_size,
                                         num_workers=1,
                                         device=device)
     
-    val_dataloader = build_dataloader(validation_set_path,dataset_configuration,
+    val_dataloader = build_dataloader(validation_path,dataset_configuration,
                                         batch_size=batch_size,
                                         num_workers=1,
                                         device=device)
-    val_dataloader = build_dataloader(val_path,
-                                      batch_size=batch_size,
-                                      validation=True,
-                                      num_workers=1,
-                                      device=device)
 
     # load pretrained ASR model, FROZEN
     ASR_config = config.get('ASR_config', False)
@@ -142,7 +136,7 @@ def main(config_path):
                 for v in value:
                     writer.add_figure('eval_spec', v, epoch)
         if (epoch % save_freq) == 0:
-            trainer.save_checkpoint(osp.join(log_dir, 'epoch_%05d.pth' % epoch))
+            trainer.save_checkpoint(osp.join(log_dir, 'ex_2_epoch.pth' % epoch))
     return 0
 
 if __name__=="__main__":
