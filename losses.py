@@ -50,9 +50,7 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, x_ref=None, use_r1_reg=True
     # with fake audios
     with torch.no_grad():
         s_trg = nets.emotion_encoder(x_ref, y_trg)
-            
-        F0 = nets.f0_model.get_feature_GAN(x_real)
-        x_fake = nets.generator(x_real, s_trg, masks=None, F0=F0)
+        x_fake = nets.generator(x_real, s_trg, masks=None)
     out = nets.discriminator(x_fake, y_trg)
     loss_fake = adv_loss(out, 0)
     if use_con_reg:
@@ -90,32 +88,20 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=Fa
     
     # compute ASR/F0 features (real)
     with torch.no_grad():
-        F0_real, GAN_F0_real, cyc_F0_real = nets.f0_model(x_real)
         ASR_real = nets.asr_model.get_feature(x_real)
     
     # adversarial loss
-    x_fake = nets.generator(x_real, s_trg, masks=None, F0=GAN_F0_real)
+    x_fake = nets.generator(x_real, s_trg, masks=None)
     out = nets.discriminator(x_fake, y_trg) 
     loss_adv = adv_loss(out, 1)
     
     # compute ASR/F0 features (fake)
-    F0_fake, GAN_F0_fake, _ = nets.f0_model(x_fake)
     ASR_fake = nets.asr_model.get_feature(x_fake)
     
     # norm consistency loss
     x_fake_norm = log_norm(x_fake)
     x_real_norm = log_norm(x_real)
     loss_norm = ((torch.nn.ReLU()(torch.abs(x_fake_norm - x_real_norm) - args.norm_bias))**2).mean()
-    
-    # F0 loss
-    loss_f0 = f0_loss(F0_fake, F0_real)
-    
-    # style F0 loss (style initialization)
-    if x_refs is not None and args.lambda_f0_sty > 0 and not use_adv_cls:
-        F0_sty, _, _ = nets.f0_model(x_ref)
-        loss_f0_sty = F.l1_loss(compute_mean_f0(F0_fake), compute_mean_f0(F0_sty))
-    else:
-        loss_f0_sty = torch.zeros(1).mean()
     
     # ASR loss
     loss_asr = F.smooth_l1_loss(ASR_fake, ASR_real)
@@ -126,23 +112,19 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=Fa
     
     # diversity sensitive loss
     s_trg2 = nets.emotion_encoder(x_ref2, y_trg)
-    x_fake2 = nets.generator(x_real, s_trg2, masks=None, F0=GAN_F0_real)
+    x_fake2 = nets.generator(x_real, s_trg2, masks=None)
     x_fake2 = x_fake2.detach()
-    _, GAN_F0_fake2, _ = nets.f0_model(x_fake2)
     loss_ds = torch.mean(torch.abs(x_fake - x_fake2))
-    loss_ds += F.smooth_l1_loss(GAN_F0_fake, GAN_F0_fake2.detach())
     
     # cycle-consistency loss
     s_org = nets.emotion_encoder(x_real, y_org)
-    x_rec = nets.generator(x_fake, s_org, masks=None, F0=GAN_F0_fake)
+    x_rec = nets.generator(x_fake, s_org, masks=None)
     loss_cyc = torch.mean(torch.abs(x_rec - x_real))
-    # F0 loss in cycle-consistency loss
+    # ASR loss in cycle-consistency loss
     if args.lambda_f0 > 0:
-        _, _, cyc_F0_rec = nets.f0_model(x_rec)
-        loss_cyc += F.smooth_l1_loss(cyc_F0_rec, cyc_F0_real)
-    if args.lambda_asr > 0:
-        ASR_recon = nets.asr_model.get_feature(x_rec)
-        loss_cyc += F.smooth_l1_loss(ASR_recon, ASR_real)
+        if args.lambda_asr > 0:
+            ASR_recon = nets.asr_model.get_feature(x_rec)
+            loss_cyc += F.smooth_l1_loss(ASR_recon, ASR_real)
     
     # adversarial classifier loss
     if use_adv_cls:
@@ -155,8 +137,6 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=Fa
            - args.lambda_ds * loss_ds + args.lambda_cyc * loss_cyc\
            + args.lambda_norm * loss_norm \
            + args.lambda_asr * loss_asr \
-           + args.lambda_f0 * loss_f0 \
-           + args.lambda_f0_sty * loss_f0_sty \
            + args.lambda_adv_cls * loss_adv_cls
 
     return loss, Munch(adv=loss_adv.item(),
@@ -165,7 +145,6 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=Fa
                        cyc=loss_cyc.item(),
                        norm=loss_norm.item(),
                        asr=loss_asr.item(),
-                       f0=loss_f0.item(),
                        adv_cls=loss_adv_cls.item())
     
 # for norm consistency loss
@@ -198,20 +177,3 @@ def r1_reg(d_out, x_in):
     assert(grad_dout2.size() == x_in.size())
     reg = 0.5 * grad_dout2.view(batch_size, -1).sum(1).mean(0)
     return reg
-
-# for F0 consistency loss
-def compute_mean_f0(f0):
-    f0_mean = f0.mean(-1)
-    f0_mean = f0_mean.expand(f0.shape[-1], f0_mean.shape[0]).transpose(0, 1) # (B, M)
-    return f0_mean
-
-def f0_loss(x_f0, y_f0):
-    """
-    x.shape = (B, 1, M, L): predict
-    y.shape = (B, 1, M, L): target
-    """
-    # compute the mean
-    x_mean = compute_mean_f0(x_f0)
-    y_mean = compute_mean_f0(y_f0)
-    loss = F.l1_loss(x_f0 / x_mean, y_f0 / y_mean)
-    return loss

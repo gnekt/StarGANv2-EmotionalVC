@@ -159,7 +159,7 @@ class HighPass(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, dim_in=48, style_dim=48, max_conv_dim=48*8, w_hpf=1, F0_channel=0):
+    def __init__(self, dim_in=48, style_dim=48, max_conv_dim=48*8, w_hpf=1):
         super().__init__()
 
         self.stem = nn.Conv2d(1, dim_in, 3, 1, 1)
@@ -169,7 +169,6 @@ class Generator(nn.Module):
             nn.InstanceNorm2d(dim_in, affine=True),
             nn.LeakyReLU(0.2),
             nn.Conv2d(dim_in, 1, 1, 1, 0))
-        self.F0_channel = F0_channel
         # down/up-sampling blocks
         repeat_num = 4 #int(np.log2(img_size)) - 4
         if w_hpf > 0:
@@ -193,40 +192,19 @@ class Generator(nn.Module):
         for _ in range(2):
             self.encode.append(
                 ResBlk(dim_out, dim_out, normalize=True))
-        
-        # F0 blocks 
-        if F0_channel != 0:
-            self.decode.insert(
-                0, AdainResBlk(dim_out + int(F0_channel / 2), dim_out, style_dim, w_hpf=w_hpf))
-        
-        # bottleneck blocks (decoder)
-        for _ in range(2):
-            self.decode.insert(
-                    0, AdainResBlk(dim_out + int(F0_channel / 2), dim_out + int(F0_channel / 2), style_dim, w_hpf=w_hpf))
-        
-        if F0_channel != 0:
-            self.F0_conv = nn.Sequential(
-                ResBlk(F0_channel, int(F0_channel / 2), normalize=True, downsample="half"),
-            )
-        
 
         if w_hpf > 0:
             device = torch.device(
                 'cuda' if torch.cuda.is_available() else 'cpu')
             self.hpf = HighPass(w_hpf, device)
 
-    def forward(self, x, s, masks=None, F0=None):            
+    def forward(self, x, s, masks=None):            
         x = self.stem(x)
         cache = {}
         for block in self.encode:
             if (masks is not None) and (x.size(2) in [32, 64, 128]):
                 cache[x.size(2)] = x
             x = block(x)
-            
-        if F0 is not None:
-            F0 = self.F0_conv(F0)
-            F0 = F.adaptive_avg_pool2d(F0, [x.shape[-2], x.shape[-1]])
-            x = torch.cat([x, F0], axis=1)
 
         for block in self.decode:
             x = block(x, s)
@@ -372,8 +350,8 @@ class Discriminator2d(nn.Module):
         return out
 
 
-def build_model(args, F0_model, ASR_model):
-    generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf, F0_channel=args.F0_channel)
+def build_model(args, ASR_model):
+    generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf)
     emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     discriminator = Discriminator(args.dim_in, args.num_domains, args.max_conv_dim, args.n_repeat)
     generator_ema = copy.deepcopy(generator)
@@ -382,7 +360,6 @@ def build_model(args, F0_model, ASR_model):
     nets = Munch(generator=generator,
                  emotion_encoder=emotion_encoder,
                  discriminator=discriminator,
-                 f0_model=F0_model,
                  asr_model=ASR_model)
     
     nets_ema = Munch(generator=generator_ema,

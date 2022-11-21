@@ -1,22 +1,29 @@
 log_dir: "Models/Experiment-3"
-save_freq: 10
-device: "cuda"
+save_freq: 2
+device: "cpu"
 epochs: 150
 batch_size: 5
 pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
-dataset_configuration:
-  data_separetor: "|"
-  data_header: ["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"]
+dataset_maker:
+  dataset_output_dir: "Data/"
 
-F0_path: "Utils/JDC/bst.t7"
+dataset_configuration:
+  data_separetor: ","
+  data_header: ["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"]
+  training_path: "Data/training_list.txt"
+  validation_path: "Data/validation_list.txt" 
+  training_set_percentage: 80
+  validation_set_percentage: 20
+
 ASR_config: "Utils/ASR/config.yml"
 ASR_path: "Utils/ASR/epoch_00100.pth"
 
 preprocess_params:
   sr: 24000
+  max_mel_length: 400
   spect_params:
     n_fft: 2048
     win_length: 1200
