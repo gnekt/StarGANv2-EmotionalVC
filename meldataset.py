@@ -88,7 +88,7 @@ class MelDataset(torch.utils.data.Dataset):
         row = self.dataset.iloc[idx]
         self.dataset.iloc[idx]["already_used"] = True
         mel_tensor, label = self._load_data(row["source_path"])
-        ref_mel_tensor, ref_label = self._load_data(row["reference_path"],emotion_map[row["reference_emotion"]])
+        ref_mel_tensor, ref_label = self._load_data(row["reference_path"],row["reference_emotion"])
         # In emotion embedding the speaker is not important, instead emotion is.
         # Style diversification loss is ambiguous in our task, a way to keep it forgettable without change a lot of code could be this way
         ref2_mel_tensor = ref_mel_tensor
