@@ -1,7 +1,7 @@
 import pandas as pd
 
 dataframe = pd.read_csv("./dataset.csv", sep=";")
-out_file = open("data.txt","w") 
+validation 
 for index, group in dataframe.groupby(["dataset","actor_id","statement_id"]):
     emotional_df = group[dataframe["emotion"] != "neutral"]
     try:

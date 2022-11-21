@@ -74,6 +74,11 @@ def main(config_path):
                                         batch_size=batch_size,
                                         num_workers=1,
                                         device=device)
+    val_dataloader = build_dataloader(val_path,
+                                      batch_size=batch_size,
+                                      validation=True,
+                                      num_workers=1,
+                                      device=device)
 
     # load pretrained ASR model, FROZEN
     ASR_config = config.get('ASR_config', False)
