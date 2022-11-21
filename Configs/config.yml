@@ -1,8 +1,8 @@
 log_dir: "Models/Experiment-1_New"
 save_freq: 2
 device: "cuda"
-epochs: 300
-batch_size: 15
+epochs: 150
+batch_size: 5
 pretrained_model: "Models/Experiment-1/epoch.pth"
 load_only_params: false
 fp16_run: true
