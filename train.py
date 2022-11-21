@@ -135,7 +135,7 @@ def main(config_path):
                 for v in value:
                     writer.add_figure('eval_spec', v, epoch)
         if (epoch % save_freq) == 0:
-            trainer.save_checkpoint(osp.join(log_dir, 'epoch.pth'))
+            trainer.save_checkpoint(osp.join(log_dir, 'ex_1_epoch.pth'))
     return 0
 
 
