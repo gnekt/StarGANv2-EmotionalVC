@@ -136,7 +136,7 @@ def main():
                 for v in value:
                     writer.add_figure('eval_spec', v, epoch)
         if (epoch % save_freq) == 0:
-            trainer.save_checkpoint(osp.join(log_dir, 'ex_2_epoch.pth' % epoch))
+            trainer.save_checkpoint(osp.join(log_dir, 'ex_2_epoch.pth'))
     return 0
 
 if __name__=="__main__":
