@@ -3,9 +3,9 @@
 *.pkl
 Model/*
 Vocoder/*
-datasets/*
 Models/*
 *.pyc
 dataset/*
 Demo/*
 Utils/*
+*.csv

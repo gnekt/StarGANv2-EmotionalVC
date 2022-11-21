@@ -52,7 +52,7 @@ class UpSample(nn.Module):
 
 class ResBlk(nn.Module):
     def __init__(self, dim_in, dim_out, actv=nn.LeakyReLU(0.2),
-                 normalize=False, downsample='none'):
+                    normalize=False, downsample='none'):
         super().__init__()
         self.actv = actv
         self.normalize = normalize
@@ -107,7 +107,7 @@ class AdaIN(nn.Module):
 
 class AdainResBlk(nn.Module):
     def __init__(self, dim_in, dim_out, style_dim=64, w_hpf=0,
-                 actv=nn.LeakyReLU(0.2), upsample='none'):
+                    actv=nn.LeakyReLU(0.2), upsample='none'):
         super().__init__()
         self.w_hpf = w_hpf
         self.actv = actv
@@ -186,7 +186,7 @@ class Generator(nn.Module):
                 ResBlk(dim_in, dim_out, normalize=True, downsample=_downtype))
             self.decode.insert(
                 0, AdainResBlk(dim_out, dim_in, style_dim,
-                               w_hpf=w_hpf, upsample=_downtype))  # stack-like
+                                w_hpf=w_hpf, upsample=_downtype))  # stack-like
             dim_in = dim_out
 
         # bottleneck blocks (encoder)
@@ -312,10 +312,10 @@ class Discriminator(nn.Module):
         
         # real/fake discriminator
         self.dis = Discriminator2d(dim_in=dim_in, num_domains=num_domains,
-                                  max_conv_dim=max_conv_dim, repeat_num=repeat_num)
+                                    max_conv_dim=max_conv_dim, repeat_num=repeat_num)
         # adversarial classifier
         self.cls = Discriminator2d(dim_in=dim_in, num_domains=num_domains,
-                                  max_conv_dim=max_conv_dim, repeat_num=repeat_num)                             
+                                    max_conv_dim=max_conv_dim, repeat_num=repeat_num)                             
         self.num_domains = num_domains
         
     def forward(self, x, y):
@@ -377,14 +377,14 @@ def build_model(args, F0_model, ASR_model):
     style_encoder_ema = copy.deepcopy(style_encoder)
         
     nets = Munch(generator=generator,
-                 mapping_network=mapping_network,
-                 style_encoder=style_encoder,
-                 discriminator=discriminator,
-                 f0_model=F0_model,
-                 asr_model=ASR_model)
+                mapping_network=mapping_network,
+                style_encoder=style_encoder,
+                discriminator=discriminator,
+                f0_model=F0_model,
+                asr_model=ASR_model)
     
     nets_ema = Munch(generator=generator_ema,
-                     mapping_network=mapping_network_ema,
-                     style_encoder=style_encoder_ema)
+                        mapping_network=mapping_network_ema,
+                        style_encoder=style_encoder_ema)
 
     return nets, nets_ema

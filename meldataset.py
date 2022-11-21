@@ -136,7 +136,7 @@ class MelDataset(torch.utils.data.Dataset):
             torch.tensor: tensorial representation of source wav
         """ 
         try:       
-            wave, sr = sf.read(wave_path) #FIXME Sometimes raise an exception, probably due to some mispelling in the path-file of the source
+            wave, sr = sf.read(wave_path)
         except Exception as ex:
             print(ex)
             print(wave_path)

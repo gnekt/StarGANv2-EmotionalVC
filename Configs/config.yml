@@ -1,14 +1,14 @@
-log_dir: "Models/Experiment-1_New"
+log_dir: "Models/Experiment-1"
 save_freq: 2
-device: "cuda"
+device: "cpu"
 epochs: 150
 batch_size: 5
-pretrained_model: "Models/Experiment-1/epoch.pth"
+pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
-train_data: "Data/train_list.txt"
-val_data: "Data/val_list.txt"
+train_data: "Data/training_list.txt"
+val_data: "Data/validation_list.txt"
 
 F0_path: "Utils/JDC/bst.t7"
 ASR_config: "Utils/ASR/config.yml"
@@ -25,7 +25,7 @@ model_params:
   dim_in: 64
   style_dim: 64
   latent_dim: 16
-  num_domains: 20
+  num_domains: 3
   max_conv_dim: 512
   n_repeat: 4
   w_hpf: 0
