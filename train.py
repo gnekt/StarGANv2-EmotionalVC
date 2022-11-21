@@ -85,14 +85,9 @@ def main(config_path):
     ASR_model.load_state_dict(params)
     _ = ASR_model.eval()    
     
-    # load pretrained F0 model
-    F0_path = config.get('F0_path', False)
-    F0_model = JDCNet(num_class=1, seq_len=192)
-    params = torch.load(F0_path, map_location='cpu')['net']
-    F0_model.load_state_dict(params)
     
     # build model
-    model, model_ema = build_model(Munch(config['model_params']), F0_model, ASR_model)
+    model, model_ema = build_model(Munch(config['model_params']), ASR_model)
 
     scheduler_params = {
         "max_lr": float(config['optimizer_params'].get('lr', 2e-4)),
