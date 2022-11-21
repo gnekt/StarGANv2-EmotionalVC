@@ -64,12 +64,12 @@ def main(config_path):
     # load data
     train_dataloader = build_dataloader(train_path,
                                         batch_size=batch_size,
-                                        num_workers=1,
+                                        num_workers=0,
                                         device=device)
     val_dataloader = build_dataloader(val_path,
                                       batch_size=batch_size,
                                       validation=True,
-                                      num_workers=1,
+                                      num_workers=0,
                                       device=device)
 
     # load pretrained ASR model
