@@ -236,7 +236,7 @@ class EmotionEncoder(nn.Module):
         self.shared = nn.Sequential(*blocks)
         self.emotion_fc = nn.Linear(4, 254)
         self.emotion_fc_out = nn.Sigmoid()
-        self.lstm = nn.LSTM(96, 254, bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(200, 254, bidirectional=True, batch_first=True)
         self.b1_fc = nn.Linear(254, 127)
         self.b1_fc_out = nn.Sigmoid()
         self.b2_fc = nn.Linear(254, 127)
@@ -254,14 +254,14 @@ class EmotionEncoder(nn.Module):
         Returns:
             _type_: _description_
         """        
-        y = F.one_hot(torch.arange(0, 4))[y,:].type(torch.FloatTensor)
+        y = F.one_hot(torch.arange(0, 4)).type(torch.FloatTensor).to("cuda")[y]
         h = self.shared(x)
 
         h = h.squeeze(2) # (Batch, Channels, ChannelDim)
 
         emotion_fc_linear = self.emotion_fc(y)
         emotion_fc_out = self.emotion_fc_out(emotion_fc_linear)
-        emotion_fc_out = torch.cat((emotion_fc_out.unsqueeze(0),emotion_fc_out.unsqueeze(0)),0)
+        emotion_fc_out = torch.cat((emotion_fc_out.unsqueeze(0),emotion_fc_out.unsqueeze(0)),0) # (2*LSTM, Emotions, T_step)
         lstm_out = self.lstm(h,(emotion_fc_out, emotion_fc_out))
         b1_fc_linear = self.b1_fc(lstm_out[0][:,-1,:254])
         b2_fc_linear = self.b2_fc(lstm_out[0][:,-1,254:])
