@@ -1,6 +1,6 @@
 log_dir: "Models/Experiment-3"
 save_freq: 2
-device: "cuda"
+device: "cpu"
 epochs: 150
 batch_size: 5
 pretrained_model: ""

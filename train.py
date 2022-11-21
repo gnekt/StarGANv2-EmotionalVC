@@ -66,12 +66,12 @@ def main(config_path):
     # load dataloader 
     train_dataloader = build_dataloader(training_path,dataset_configuration,
                                         batch_size=batch_size,
-                                        num_workers=5,
+                                        num_workers=1,
                                         device=device)
     
     val_dataloader = build_dataloader(validation_path,dataset_configuration,
                                         batch_size=batch_size,
-                                        num_workers=5,
+                                        num_workers=1,
                                         device=device)
 
     # load pretrained ASR model, FROZEN
@@ -130,7 +130,7 @@ def main(config_path):
                 for v in value:
                     writer.add_figure('eval_spec', v, epoch)
         if (epoch % save_freq) == 0:
-            trainer.save_checkpoint(osp.join(log_dir, 'epoch_%05d.pth' % epoch))
+            trainer.save_checkpoint(osp.join(log_dir, 'ex_3_epoch.pth'))
     return 0
 
 if __name__=="__main__":
