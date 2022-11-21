@@ -18,7 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-from dataset_maker.emotion_mapping import emotion_map
+from dataset.emotion_mapping import emotion_map
 
 np.random.seed(1)
 random.seed(1)
