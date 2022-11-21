@@ -7,5 +7,5 @@ for index, value in pretrained_model.items():
     gdown.download(value[0],f"{index}.zip")
 
 import zipfile
-with zipfile.ZipFile("./datasets.zip", 'r') as zip_ref:
-    zip_ref.extractall("./datasets")
+with zipfile.ZipFile("./dataset.zip", 'r') as zip_ref:
+    zip_ref.extractall("./dataset")
