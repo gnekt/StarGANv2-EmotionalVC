@@ -8,4 +8,4 @@ Models/*
 *.wav
 Demo/*
 *.pyc
-dataset/eng/ESD/0011/Angry/0011_000351.wav
+*.csv

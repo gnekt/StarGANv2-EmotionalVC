@@ -67,13 +67,18 @@ def main(config_path):
     validation_set_path = "./Data/validation_list.txt"
     train_dataloader = build_dataloader(train_set_path,dataset_configuration,
                                         batch_size=batch_size,
-                                        num_workers=2,
+                                        num_workers=1,
                                         device=device)
     
     val_dataloader = build_dataloader(validation_set_path,dataset_configuration,
                                         batch_size=batch_size,
-                                        num_workers=2,
+                                        num_workers=1,
                                         device=device)
+    val_dataloader = build_dataloader(val_path,
+                                      batch_size=batch_size,
+                                      validation=True,
+                                      num_workers=1,
+                                      device=device)
 
     # load pretrained ASR model, FROZEN
     ASR_config = config.get('ASR_config', False)
