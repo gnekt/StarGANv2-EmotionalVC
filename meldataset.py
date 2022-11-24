@@ -174,7 +174,7 @@ class Collater(object):
             labels[bid] = label
             ref_labels[bid] = ref_label
         
-        mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1)
+        mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1) # Unsqueeze is used for the next conv2d, think as the channel of the audio, like mono or stereo
         return mels, labels, ref_mels, ref2_mels, ref_labels
 
 def build_dataloader(dataset_path,

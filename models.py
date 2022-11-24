@@ -325,7 +325,7 @@ class Discriminator2d(nn.Module):
         """_summary_
 
         Args:
-            x (Batch,1,NMels,Mel_Dim): _description_
+            x (Batch,1,NMels,Mel_Dim): 
 
         Returns:
             _type_: _description_
