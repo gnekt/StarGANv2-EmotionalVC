@@ -215,6 +215,20 @@ class Generator(nn.Module):
 
         return self.to_out(x)
 
+class GST(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+        self.encoder = EmotionEncoder()
+        self.eml = EmotionMapperLayer()
+
+    def forward(self, inputs):
+        enc_out = self.encoder(inputs)
+        style_embed = self.eml(enc_out)
+
+        return style_embed
+    
 class EmotionEncoder(nn.Module):
     def __init__(self, dim_in=48, style_dim=48, num_domains=3, max_conv_dim=384):
         super().__init__()
@@ -272,16 +286,34 @@ class EmotionEncoder(nn.Module):
         emotion_encoding = self.encoder_fc_out(emotion_encoding)
         return emotion_encoding
 
+class EmotionMapperLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embed = nn.Parameter(torch.FloatTensor(15, 64 // 4))
+        d_q = 64
+        d_k = 64 // 4
+        # self.attention = MultiHeadAttention(hp.num_heads, d_model, d_q, d_v)
+        self.attention = nn.MultiheadAttention(query_dim=d_q, key_dim=d_k, num_units=64, num_heads=4)
+        nn.init.normal_(self.embed, mean=0, std=0.5)
+        
+    def forward(self, inputs):
+        N = inputs.size(0)
+        query = inputs.unsqueeze(1)  # [N, 1, E//2]
+        keys = F.tanh(self.embed).unsqueeze(0).expand(N, -1, -1)  # [N, token_num, E // num_heads]
+        style_embed = self.attention(query, keys)
+        return style_embed
+    
+    
 class Discriminator(nn.Module):
     def __init__(self, dim_in=48, num_domains=3, max_conv_dim=384, repeat_num=4):
         super().__init__()
         
         # real/fake discriminator
         self.dis = Discriminator2d(dim_in=dim_in, num_domains=num_domains,
-                                  max_conv_dim=max_conv_dim, repeat_num=repeat_num)
+                                    max_conv_dim=max_conv_dim, repeat_num=repeat_num)
         # adversarial classifier
         self.cls = Discriminator2d(dim_in=dim_in, num_domains=num_domains,
-                                  max_conv_dim=max_conv_dim, repeat_num=repeat_num)                             
+                                    max_conv_dim=max_conv_dim, repeat_num=repeat_num)                             
         self.num_domains = num_domains
         
     def forward(self, x, y):
