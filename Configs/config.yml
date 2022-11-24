@@ -3,7 +3,7 @@ save_freq: 2
 device: "cuda"
 epochs: 150
 batch_size: 5
-pretrained_model: ""
+pretrained_model: "Models/Experiment-1/ex_1_epoch.pth"
 load_only_params: false
 fp16_run: true
 

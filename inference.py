@@ -10,14 +10,14 @@ import torchaudio
 import librosa
 from Utils.ASR.models import ASRCNN
 from Utils.JDC.model import JDCNet
-from models import Generator, EmotionEncoder
-from dataset_maker.emotion_mapping import emotion_map
+from models import Generator, StyleEncoder
+from dataset.emotion_mapping import emotion_map
 import soundfile as sf
 import random 
 
 EMOTION_LABEL=[id for id,value in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-2/epoch_00040.pth'
-DEMO_PATH='Demo/neutral.mp3'
+MDOEL_PATH='Models/Experiment-1/ex_1_epoch.pth'
+DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
 DEVICE="cuda"
@@ -36,10 +36,10 @@ def preprocess(wave):
 def build_model(model_params={}):
     args = Munch(model_params)
     generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf, F0_channel=args.F0_channel)
-    emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
+    style_encoder = StyleEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     
     nets_ema = Munch(generator=generator,
-                     emotion_encoder=emotion_encoder)
+                     style_encoder=style_encoder)
 
     return nets_ema
 
@@ -59,7 +59,7 @@ def compute_style(speaker_dicts):
 
             with torch.no_grad():
                 label = torch.LongTensor([speaker])
-                ref = starganv2.emotion_encoder(mel_tensor.unsqueeze(1), label)
+                ref = starganv2.style_encoder(mel_tensor.unsqueeze(1), label)
         reference_embeddings[key] = (ref, label)
     
     return reference_embeddings
@@ -80,14 +80,14 @@ vocoder.remove_weight_norm()
 _ = vocoder.eval()
 
 print("Load neural model..")
-with open('Models/Experiment-2/config.yml') as f:
+with open('Models/Experiment-1/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
 params = torch.load(MDOEL_PATH, map_location='cpu')
 params = params['model_ema']
 _ = [starganv2[key].load_state_dict(params[key]) for key in starganv2]
 _ = [starganv2[key].eval() for key in starganv2]
-starganv2.emotion_encoder = starganv2.emotion_encoder.to(DEVICE)
+starganv2.style_encoder = starganv2.style_encoder.to(DEVICE)
 starganv2.generator = starganv2.generator.to(DEVICE)
 
 # load input wave
@@ -98,7 +98,6 @@ audio.dtype = np.float32
 # with reference, using style encoder
 emotion_ref={}
 for index,val in emotion_map.items():
-    print(index)
     if index=="neutral": continue
     emotion_ref[val] = (f'Demo/emotion_sample/{index}/{index}.wav', val)
 
