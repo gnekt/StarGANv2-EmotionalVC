@@ -217,14 +217,14 @@ class Generator(nn.Module):
 
 class GST(nn.Module):
 
-    def __init__(self):
+    def __init__(self,dim_in,style_dim,num_domains, max_conv_dim):
 
         super().__init__()
-        self.encoder = EmotionEncoder()
+        self.encoder = EmotionEncoder(dim_in,style_dim,num_domains, max_conv_dim)
         self.eml = EmotionMapperLayer()
 
-    def forward(self, inputs):
-        enc_out = self.encoder(inputs)
+    def forward(self, inputs,targets):
+        enc_out = self.encoder(inputs,targets)
         style_embed = self.eml(enc_out)
 
         return style_embed
@@ -289,19 +289,18 @@ class EmotionEncoder(nn.Module):
 class EmotionMapperLayer(nn.Module):
     def __init__(self):
         super().__init__()
-        self.embed = nn.Parameter(torch.FloatTensor(15, 64 // 4))
-        d_q = 64
-        d_k = 64 // 4
+        self.embed = nn.Parameter(torch.FloatTensor(15, 64))
+
         # self.attention = MultiHeadAttention(hp.num_heads, d_model, d_q, d_v)
-        self.attention = nn.MultiheadAttention(query_dim=d_q, key_dim=d_k, num_units=64, num_heads=4)
+        self.attention = nn.MultiheadAttention(64,4,batch_first=True)
         nn.init.normal_(self.embed, mean=0, std=0.5)
         
     def forward(self, inputs):
         N = inputs.size(0)
         query = inputs.unsqueeze(1)  # [N, 1, E//2]
         keys = F.tanh(self.embed).unsqueeze(0).expand(N, -1, -1)  # [N, token_num, E // num_heads]
-        style_embed = self.attention(query, keys)
-        return style_embed
+        style_embed, weight_style_embed = self.attention(query, keys, keys)
+        return style_embed.squeeze(1)
     
     
 class Discriminator(nn.Module):
@@ -384,7 +383,7 @@ class Discriminator2d(nn.Module):
 
 def build_model(args, ASR_model):
     generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf)
-    emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
+    emotion_encoder = GST(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     discriminator = Discriminator(args.dim_in, args.num_domains, args.max_conv_dim, args.n_repeat)
     generator_ema = copy.deepcopy(generator)
     emotion_encoder_ema = copy.deepcopy(emotion_encoder)
