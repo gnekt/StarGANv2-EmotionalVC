@@ -9,18 +9,17 @@ import torch.nn.functional as F
 import torchaudio
 import librosa
 from Utils.ASR.models import ASRCNN
-from Utils.JDC.model import JDCNet
 from models import Generator, EmotionEncoder
 from dataset_maker.emotion_mapping import emotion_map
 import soundfile as sf
 import random 
 
 EMOTION_LABEL=[id for id,value in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-2/epoch_00040.pth'
-DEMO_PATH='Demo/neutral.mp3'
+MDOEL_PATH='Models/Experiment-3/ex_3_epoch.pth'
+DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
-DEVICE="cuda"
+DEVICE="cpu"
 
 print("Start inference..")
 to_mel = torchaudio.transforms.MelSpectrogram(
@@ -35,7 +34,7 @@ def preprocess(wave):
 
 def build_model(model_params={}):
     args = Munch(model_params)
-    generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf, F0_channel=args.F0_channel)
+    generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf)
     emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     
     nets_ema = Munch(generator=generator,
@@ -44,33 +43,22 @@ def build_model(model_params={}):
     return nets_ema
 
 def compute_style(speaker_dicts):
-    reference_embeddings = {}
-    for key, (path, speaker) in speaker_dicts.items():
-        if path == "":
-            label = torch.LongTensor([speaker]).to(DEVICE)
-            latent_dim = starganv2.mapping_network.shared[0].in_features
-            ref = starganv2.mapping_network(torch.randn(1, latent_dim).to(DEVICE), label)
-        else:
-            wave, sr = librosa.load(path, sr=SAMPLE_RATE)
-            audio, index = librosa.effects.trim(wave, top_db=30)
-            if sr != 24000:
-                wave = librosa.resample(wave, sr, 24000)
-            mel_tensor = preprocess(wave).to(DEVICE)
-
-            with torch.no_grad():
-                label = torch.LongTensor([speaker])
-                ref = starganv2.emotion_encoder(mel_tensor.unsqueeze(1), label)
-        reference_embeddings[key] = (ref, label)
+    inputs = torch.zeros((len(speaker_dicts.items()),1,80,400))
+    label = torch.zeros(len(speaker_dicts.items())).type(torch.LongTensor)
+    for counter,(key, (path, speaker)) in enumerate(speaker_dicts.items()):
+        wave, sr = librosa.load(path, sr=24000)
+        audio, index = librosa.effects.trim(wave, top_db=30)
+        if sr != 24000:
+            wave = librosa.resample(wave, sr, 24000)
+        mel = preprocess(wave).to(DEVICE)
+        if mel.shape[2] >= 400: mel = mel[:,:,:400]
+        inputs[counter,0,:,:mel.shape[2]] = mel
+        label[counter] = speaker
+    with torch.no_grad():
+        label = label.to("cpu")
+        embeddings = starganv2.emotion_encoder(inputs.to("cpu"), label)
     
-    return reference_embeddings
-
-# load F0 model
-print("Load f0 model..")
-F0_model = JDCNet(num_class=1, seq_len=192)
-params = torch.load("Utils/JDC/bst.t7")['net']
-F0_model.load_state_dict(params)
-_ = F0_model.eval()
-F0_model = F0_model.to(DEVICE)
+    return embeddings
 
 # load vocoder
 print("Load vocoder model..")
@@ -80,7 +68,7 @@ vocoder.remove_weight_norm()
 _ = vocoder.eval()
 
 print("Load neural model..")
-with open('Models/Experiment-2/config.yml') as f:
+with open('Models/Experiment-3/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
 params = torch.load(MDOEL_PATH, map_location='cpu')
@@ -115,30 +103,12 @@ converted_samples = {}
 reconstructed_samples = {}
 converted_mels = {}
 
-for key, (ref, _) in reference_embeddings.items():
-    with torch.no_grad():
-        f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-        out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
-        
-        c = out.transpose(-1, -2).squeeze().to(DEVICE)
-        y_out = vocoder.inference(c)
-        y_out = y_out.view(-1).cpu()
 
-        if key not in emotion_ref or emotion_ref[key][0] == "":
-            recon = None
-        else:
-            wave, sr = librosa.load(emotion_ref[key][0], sr=SAMPLE_RATE)
-            mel = preprocess(wave)
-            c = mel.transpose(-1, -2).squeeze().to(DEVICE)
-            recon = vocoder.inference(c)
-            recon = recon.view(-1).cpu().numpy()
-
-    converted_samples[key] = y_out.numpy()
-    reconstructed_samples[key] = recon
-
-    converted_mels[key] = out
-    
-    keys.append(key)
+with torch.no_grad():
+    out = starganv2.generator(source.unsqueeze(1), reference_embeddings)
+    c = out.transpose(-1, -2).squeeze().to(DEVICE)
+    y_out = vocoder.inference(c)
+    y_out = y_out.view(-1).cpu()
 end = time.time()
 print('total processing time: %.3f sec' % (end - start) )
 
