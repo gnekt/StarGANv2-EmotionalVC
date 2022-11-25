@@ -104,16 +104,25 @@ reconstructed_samples = {}
 converted_mels = {}
 
 
+converted_samples = {
+    "anger":1,
+    "happy":2,
+    "sad":3
+}
+
 with torch.no_grad():
-    out = starganv2.generator(source.unsqueeze(1), reference_embeddings)
-    c = out.transpose(-1, -2).squeeze().to(DEVICE)
-    y_out = vocoder.inference(c)
-    y_out = y_out.view(-1).cpu()
+        out = starganv2.generator(source.unsqueeze(1), reference_embeddings)
+        c = out.transpose(-1, -2).squeeze().to(DEVICE)
+        for i,(emotion,value) in enumerate(converted_samples.items()):
+            y_out = vocoder.inference(c[i])
+            y_out = y_out.view(-1).cpu()
+            converted_samples[emotion]=y_out
+            
 end = time.time()
 print('total processing time: %.3f sec' % (end - start) )
 
 for key, wave in converted_samples.items():
-    emotion=EMOTION_LABEL[key]
+    emotion=key
     rnd_number=random.randint(1,999)+random.randint(1,999)
     print('Converted: %s' % key)
     print("storing sample..")
