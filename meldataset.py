@@ -76,7 +76,7 @@ class MelDataset(torch.utils.data.Dataset):
         
         self.to_melspec = torchaudio.transforms.MelSpectrogram(**MEL_PARAMS)
         self.mean, self.std = -4, 4
-        self.max_mel_length = 400
+        self.max_mel_length = 192
 
     def __len__(self):
         return self.dataset.shape[0]
@@ -148,7 +148,7 @@ class Collater(object):
     def __init__(self, return_wave=False):
         self.text_pad_index = 0
         self.return_wave = return_wave
-        self.max_mel_length = 400
+        self.max_mel_length = 192
         self.mel_length_step = 16
         self.latent_dim = 16
 

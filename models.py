@@ -250,7 +250,7 @@ class EmotionEncoder(nn.Module):
         self.shared = nn.Sequential(*blocks)
         self.emotion_fc = nn.Linear(4, 254)
         self.emotion_fc_out = nn.Sigmoid()
-        self.lstm = nn.LSTM(200, 254, bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(96, 254, bidirectional=True, batch_first=True)
         self.b1_fc = nn.Linear(254, 127)
         self.b1_fc_out = nn.Sigmoid()
         self.b2_fc = nn.Linear(254, 127)
