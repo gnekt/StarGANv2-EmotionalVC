@@ -19,7 +19,7 @@ MDOEL_PATH='Models/Experiment-3/ex_3_epoch.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
-DEVICE="cpu"
+DEVICE="cuda"
 
 print("Start inference..")
 to_mel = torchaudio.transforms.MelSpectrogram(
@@ -43,7 +43,7 @@ def build_model(model_params={}):
     return nets_ema
 
 def compute_style(speaker_dicts):
-    inputs = torch.zeros((len(speaker_dicts.items()),1,80,400))
+    inputs = torch.zeros((len(speaker_dicts.items()),1,80,192))
     label = torch.zeros(len(speaker_dicts.items())).type(torch.LongTensor)
     for counter,(key, (path, speaker)) in enumerate(speaker_dicts.items()):
         wave, sr = librosa.load(path, sr=24000)
@@ -51,12 +51,12 @@ def compute_style(speaker_dicts):
         if sr != 24000:
             wave = librosa.resample(wave, sr, 24000)
         mel = preprocess(wave).to(DEVICE)
-        if mel.shape[2] >= 400: mel = mel[:,:,:400]
+        if mel.shape[2] >= 192: mel = mel[:,:,:192]
         inputs[counter,0,:,:mel.shape[2]] = mel
         label[counter] = speaker
     with torch.no_grad():
-        label = label.to("cpu")
-        embeddings = starganv2.emotion_encoder(inputs.to("cpu"), label)
+        label = label.to("cuda")
+        embeddings = starganv2.emotion_encoder(inputs.to("cuda"), label)
     
     return embeddings
 
@@ -71,7 +71,7 @@ print("Load neural model..")
 with open('Models/Experiment-3/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
-params = torch.load(MDOEL_PATH, map_location='cpu')
+params = torch.load(MDOEL_PATH, map_location='cuda')
 params = params['model_ema']
 _ = [starganv2[key].load_state_dict(params[key]) for key in starganv2]
 _ = [starganv2[key].eval() for key in starganv2]
