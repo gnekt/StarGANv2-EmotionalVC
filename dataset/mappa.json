@@ -1,0 +1,265 @@
+{
+  "datasets": [
+    {
+      "dataset": "RAVDESS",
+      "separatore": "-",
+      "parametri": {
+        "emozione": {
+          "posizione": 2,
+          "conversione": {
+            "01": "neutral",
+            "02": "calm",
+            "03": "happy",
+            "04": "sad",
+            "05": "anger",
+            "06": "fearful",
+            "07": "disgust",
+            "08": "surprised" 
+          }
+        },
+        "sesso":{
+          "posizione":3,
+          "conversione":{
+            "F":"f",
+            "M":"m"
+          }
+        },
+        "testo": {
+          "posizione": 4,
+          "conversione": {
+            "01": "01",
+            "02": "02"
+          }
+        },
+        "attore": {
+          "posizione": 6
+        }
+      }
+    },
+    {
+      "dataset": "SAVEE",
+      "separatore": "_",
+      "parametri": {
+        "emozione": {
+          "posizione": 0,
+          "conversione": {
+            "neutral": "neutral",
+            "happy": "happy",
+            "sad": "sad",
+            "anger": "anger",
+            "fearful": "fearful",
+            "disgust": "disgust",
+            "surprised": "surprised"
+          }
+        },
+        "testo": {
+          "posizione": 4
+        },
+        "attore": {
+          "posizione": 2
+        },
+        "sesso": {
+          "posizione": 3
+        }
+      }
+    },
+    {
+      "dataset": "ECARINI",
+      "separatore": "_",
+      "parametri": {
+        "emozione": {
+          "posizione": 0,
+          "conversione": {
+            "neutral": "neutral",
+            "happy": "happy",
+            "sad": "sad",
+            "anger": "anger",
+            "disgust":"disgust",
+            "fearful": "fearful",
+            "surprised": "surprised"
+          }
+        },
+        "testo": {
+          "posizione": 6
+        },
+        "attore": {
+          "posizione": 2
+        },
+        "sesso": {
+          "posizione": 3
+        }
+      }
+    },
+    {
+      "dataset": "ESD",
+      "separatore": null,
+      "parametri": {
+        "emozione": {
+          "posizione": null,
+          "conversione": {
+            "Neutral": "neutral",
+            "Happy": "happy",
+            "Sad": "sad",
+            "Angry": "anger",
+            "Surprise": "surprised"	
+          }
+        },
+        "testo": null,
+        "attore": null,
+        "sesso": {
+          "0011":"m",
+          "0012":"f",
+          "0013":"m",
+          "0014":"m",
+          "0015":"f",
+          "0016":"f",
+          "0017":"f",
+          "0018":"f",
+          "0019":"m",
+          "0020":"m"
+        }
+      }
+    },
+    {
+      "dataset": "DEMOS",
+      "separatore": "_",
+      "parametri": {
+        "emozione": {
+          "posizione": null,
+          "conversione": {
+            "Neutral": "neutral",
+            "Happy": "happy",
+            "Sad": "sad",
+            "Angry": "anger"
+          }
+        },
+        "testo": null,
+        "attore": null,
+        "sesso": null
+      }
+    },
+    {
+      "dataset": "EMOVO",
+      "separatore": "_",
+      "parametri": {
+        "emozione": {
+          "posizione": 0,
+          "conversione": {
+            "neutral": "neutral",
+            "happy": "happy",
+            "sad": "sad",
+            "anger": "anger",
+            "disgust": "disgust",
+            "fearful":"fearful",
+            "surprised":"surprised"
+          }
+        },
+        "testo": {
+          "posizione": 6
+        },
+        "attore": {
+          "posizione": 5
+        },
+        "sesso": {
+          "posizione": 3
+        }
+      }
+    },
+    {
+      "dataset": "EMOITA",
+      "separatore": "_",
+      "parametri": {
+        "emozione": {
+          "posizione": 0,
+          "conversione": {
+            "neutral": "neutral",
+            "happy": "happy",
+            "sad": "sad",
+            "anger": "anger",
+            "fearful":"fearful",
+            "disgust":"disgust",
+            "surprised":"surprised"
+          }
+        },
+        "testo": {
+          "posizione": 8
+        },
+        "attore": {
+          "posizione": 2
+        },
+        "sesso": {
+          "posizione": 3
+        }
+      }
+    },
+    {
+      "dataset": "EMOUERJ",
+      "separatore": null,
+      "parametri": {
+        "emozione": {
+          "posizione": null,
+          "conversione": {
+            "n": "neutral",
+            "h": "happy",
+            "s": "sad",
+            "a": "anger"
+          }
+        },
+        "testo": {
+          "posizione": null
+        },
+        "attore": {
+          "posizione": null
+        },
+        "sesso": {
+          "posizione": null,
+          "conversione":{
+            "m":"m",
+            "w":"f"
+          }
+        }
+      }
+    },
+    {
+      "dataset": "CaFe",
+      "separatore": "-",
+      "parametri": {
+        "emozione": {
+          "posizione": null,
+          "conversione": {
+            "C": "anger",
+            "D": "disgust",
+            "P": "fearful",
+            "S" : "surprised",
+            "J": "happy",
+            "T": "sad",
+            "N": "neutral"
+          }
+        },
+        "testo": {
+          "posizione": 3
+        },
+        "attore": {
+          "posizione": 0
+        },
+        "sesso": {
+          "posizione": 0,
+          "conversione":{
+            "01":"m",
+            "02":"f",
+            "03":"m",
+            "04":"f",
+            "05":"m",
+            "06":"f",
+            "07":"m",
+            "08":"f",
+            "09":"m",
+            "10":"f",
+            "11":"m",
+            "12":"f"
+          }
+        }
+      }
+    }
+  ]
+}
