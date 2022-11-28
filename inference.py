@@ -4,38 +4,46 @@ import yaml
 from munch import Munch
 import numpy as np
 import torch
-from torch import nn
-import torch.nn.functional as F
 import torchaudio
 import librosa
-from Utils.ASR.models import ASRCNN
-from Utils.JDC.model import JDCNet
 from models import Generator, EmotionEncoder
 from dataset_maker.emotion_mapping import emotion_map
 import soundfile as sf
 import random 
+from typing import List, Dict, Tuple
 
-EMOTION_LABEL=[id for id,value in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-2/epoch_00040.pth'
-DEMO_PATH='Demo/neutral.mp3'
-SAMPLE_RATE=24e3
-SAMPLE_RATE=int(24e3)
-DEVICE="cuda"
-
-print("Start inference..")
+# DO NOT TOUCH
 to_mel = torchaudio.transforms.MelSpectrogram(
     n_mels=80, n_fft=2048, win_length=1200, hop_length=300)
 mean, std = -4, 4
+###########################################################
 
-def preprocess(wave):
-    wave_tensor = torch.from_numpy(wave).float()
+# Variable
+EMOTION_LABEL=[id for id, _ in emotion_map.items()]
+MDOEL_PATH='Models/Experiment-3/ex_3_epoch.pth'
+DEMO_PATH='Demo/neutral.wav'
+SAMPLE_RATE=24e3
+SAMPLE_RATE=int(24e3)
+DEVICE="cuda"
+##########################################################
+
+def preprocess(wave_tensor: torch.Tensor) -> torch.Tensor:
+    """Convert to Mel-Spectrogram
+
+    Args:
+        wave_tensor (sample,1): Waveform
+
+    Returns:
+        (MelBand, T_Mel): Mel-Spectrogram of the waveform
+    """        
+    wave_tensor = torch.from_numpy(wave_tensor).float()
     mel_tensor = to_mel(wave_tensor)
     mel_tensor = (torch.log(1e-5 + mel_tensor.unsqueeze(0)) - mean) / std
     return mel_tensor
 
-def build_model(model_params={}):
+def build_model(model_params={}) -> Munch:
     args = Munch(model_params)
-    generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf, F0_channel=args.F0_channel)
+    generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf)
     emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     
     nets_ema = Munch(generator=generator,
@@ -43,34 +51,33 @@ def build_model(model_params={}):
 
     return nets_ema
 
-def compute_style(speaker_dicts):
-    reference_embeddings = {}
-    for key, (path, speaker) in speaker_dicts.items():
-        if path == "":
-            label = torch.LongTensor([speaker]).to(DEVICE)
-            latent_dim = starganv2.mapping_network.shared[0].in_features
-            ref = starganv2.mapping_network(torch.randn(1, latent_dim).to(DEVICE), label)
-        else:
-            wave, sr = librosa.load(path, sr=SAMPLE_RATE)
-            audio, index = librosa.effects.trim(wave, top_db=30)
-            if sr != 24000:
-                wave = librosa.resample(wave, sr, 24000)
-            mel_tensor = preprocess(wave).to(DEVICE)
+def compute_style(speaker_dicts: Dict) -> torch.Tensor:
+    """Compute emotion embedding for given audio reference
 
-            with torch.no_grad():
-                label = torch.LongTensor([speaker])
-                ref = starganv2.emotion_encoder(mel_tensor.unsqueeze(1), label)
-        reference_embeddings[key] = (ref, label)
+    Args:
+        speaker_dicts (Dict): key: index, value: (Tuple) -> (audio path, emotion label)
+
+    Returns:
+        (Batch, Embedding Dim): The embeddings
+    """    
+    inputs = torch.zeros((len(speaker_dicts.items()),1,80,192))
+    label = torch.zeros(len(speaker_dicts.items())).type(torch.LongTensor)
+    for counter,(key, (path, speaker)) in enumerate(speaker_dicts.items()):
+        wave, sr = librosa.load(path, sr=24000)
+        wave, index = librosa.effects.trim(wave, top_db=30)
+        
+        if sr != 24000:
+            wave = librosa.resample(wave, sr, 24000)
+        mel = preprocess(wave).to(DEVICE)
+        # If the audio reference is longer than T_Mel*Hop_Len(300) / 24e3 -> 2.4second
+        if mel.shape[2] >= 192: mel = mel[:,:,:192] 
+        inputs[counter,0,:,:mel.shape[2]] = mel
+        label[counter] = speaker
+    with torch.no_grad():
+        label = label.to("cuda")
+        embeddings = starganv2.emotion_encoder(inputs.to("cuda"), label)
     
-    return reference_embeddings
-
-# load F0 model
-print("Load f0 model..")
-F0_model = JDCNet(num_class=1, seq_len=192)
-params = torch.load("Utils/JDC/bst.t7")['net']
-F0_model.load_state_dict(params)
-_ = F0_model.eval()
-F0_model = F0_model.to(DEVICE)
+    return embeddings
 
 # load vocoder
 print("Load vocoder model..")
@@ -79,11 +86,12 @@ vocoder = load_model("Vocoder/PreTrainedVocoder/checkpoint-400000steps.pkl").to(
 vocoder.remove_weight_norm()
 _ = vocoder.eval()
 
+# load neural model
 print("Load neural model..")
-with open('Models/Experiment-2/config.yml') as f:
+with open('Models/Experiment-3/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
-params = torch.load(MDOEL_PATH, map_location='cpu')
+params = torch.load(MDOEL_PATH, map_location='cuda')
 params = params['model_ema']
 _ = [starganv2[key].load_state_dict(params[key]) for key in starganv2]
 _ = [starganv2[key].eval() for key in starganv2]
@@ -115,35 +123,26 @@ converted_samples = {}
 reconstructed_samples = {}
 converted_mels = {}
 
-for key, (ref, _) in reference_embeddings.items():
-    with torch.no_grad():
-        f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-        out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
-        
+
+converted_samples = {
+    "anger":1,
+    "happy":2,
+    "sad":3
+}
+
+with torch.no_grad():
+        out = starganv2.generator(source.unsqueeze(1), reference_embeddings)
         c = out.transpose(-1, -2).squeeze().to(DEVICE)
-        y_out = vocoder.inference(c)
-        y_out = y_out.view(-1).cpu()
-
-        if key not in emotion_ref or emotion_ref[key][0] == "":
-            recon = None
-        else:
-            wave, sr = librosa.load(emotion_ref[key][0], sr=SAMPLE_RATE)
-            mel = preprocess(wave)
-            c = mel.transpose(-1, -2).squeeze().to(DEVICE)
-            recon = vocoder.inference(c)
-            recon = recon.view(-1).cpu().numpy()
-
-    converted_samples[key] = y_out.numpy()
-    reconstructed_samples[key] = recon
-
-    converted_mels[key] = out
-    
-    keys.append(key)
+        for i,(emotion,value) in enumerate(converted_samples.items()):
+            y_out = vocoder.inference(c[i])
+            y_out = y_out.view(-1).cpu()
+            converted_samples[emotion]=y_out
+            
 end = time.time()
 print('total processing time: %.3f sec' % (end - start) )
 
 for key, wave in converted_samples.items():
-    emotion=EMOTION_LABEL[key]
+    emotion=key
     rnd_number=random.randint(1,999)+random.randint(1,999)
     print('Converted: %s' % key)
     print("storing sample..")
