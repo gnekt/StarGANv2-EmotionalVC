@@ -4,8 +4,14 @@
 Model/*
 Vocoder/*
 dataset/*
+datasets/*
 Models/*
 *.wav
 Demo/*
 *.pyc
-*.csv
+__pycache__/*
+download.ipynb
+!dataset/data_maker.py
+!dataset/dataset_merger_stats.ipynb
+!dataset/emotion_mapping.py
+!dataset/mappa.json
