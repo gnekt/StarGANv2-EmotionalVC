@@ -1,8 +1,6 @@
 #coding: utf-8
 
-import os
 import sys
-import time
 import random
 import random
 import torch
@@ -10,12 +8,12 @@ import torchaudio
 
 import numpy as np
 import soundfile as sf
-import torch.nn.functional as F
 
-from torch import nn
 from torch.utils.data import DataLoader
 import pandas as pd
 import logging
+
+from typing import List, Tuple
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -29,6 +27,7 @@ SPECT_PARAMS = {
     "win_length": 1200,
     "hop_length": 300
 }
+
 MEL_PARAMS = {
     "n_mels": 80,
     "n_fft": 2048,
@@ -45,44 +44,49 @@ class MelDataset(torch.utils.data.Dataset):
     
     def __init__(self,
                  dataset_path: str,
-                 sr=24000,
-                 validation=False,
-                 sep="|"                 
+                 validation: bool = False,
+                 sep: str = "|"                 
                  ):
         """Constructor
 
         Args:
-            dataset_path (str): _description_
-            sr (int, optional): _description_. Defaults to 24000.
-            validation (bool, optional): _description_. Defaults to False.
-            sep (str, optional): _description_. Defaults to ";".
-
-        Raises:
-            FileExistsError: _description_
+            dataset_path (str): Path of source file with all the sample
+            validation (bool, optional): If the dataset is in Validation mode. Defaults to False.
+            sep (str, optional): Separetor of the source file. Defaults to ";".
         """        
-        logger.info(f"MelDataset:__init__: Constructor call of dataset")
-        logger.info(f"MelDataset:__init__: Check existence of dataset path..")
-        
-        logger.info(f"MelDataset:__init__: Load dataset into a dataframe object..")
         self.dataset = pd.read_csv(dataset_path, sep=sep, names=["source_path","reference_path","reference_emotion"])
         self.dataset["already_used"] = False
-         
-        logger.info(f"MelDataset:__init__: Ok.")
-
-        logger.info(f"MelDataset:__init__: Sampling Rate {sr}")
-        self.sr = sr
-        
-        logger.info(f"MelDataset:__init__: Dataset scope -> {validation}, (False) training/ (True) validation")
         self.validation = validation
-        
         self.to_melspec = torchaudio.transforms.MelSpectrogram(**MEL_PARAMS)
         self.mean, self.std = -4, 4
         self.max_mel_length = 192
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Cardinality of the dataset
+
+        Returns:
+            (int): The cardinality
+        """        
         return self.dataset.shape[0]
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, torch.Tensor, torch.Tensor, torch.Tensor, int]:
+        """Get a sample from the set
+
+        Args:
+            idx (int): Index of the selected sample
+
+        Raises:
+            IndexError: This sample was already used 
+
+        Returns:
+            (
+               (MelBand, T_Mel),
+               int,
+               (MelBand, T_Mel),
+               (MelBand, T_Mel),
+               int 
+            ): (Source Spectrogram, Source label, Reference Spectrogram, Reference2 Spectrogram, Reference Label)
+        """        
         if self.dataset.iloc[idx]["already_used"]:
             raise IndexError("")
         row = self.dataset.iloc[idx]
@@ -94,7 +98,7 @@ class MelDataset(torch.utils.data.Dataset):
         ref2_mel_tensor = ref_mel_tensor
         return mel_tensor, label, ref_mel_tensor, ref2_mel_tensor, ref_label
     
-    def _load_data(self, wav_path: str, label: int = emotion_map["neutral"]):
+    def _load_data(self, wav_path: str, label: int = emotion_map["neutral"]) -> Tuple[torch.Tensor, int]:
         """Produce mel-spectrogram given a wav file
 
         Args:
@@ -102,7 +106,7 @@ class MelDataset(torch.utils.data.Dataset):
             label (int, optional): Label(emotion) check emotion_map. Defaults to emotion_map["neutral"].
 
         Returns:
-            (torch.tensor, int): Mel-Spectrogram of the wav file, label 
+            ((MelBand, T_Mel), int): Mel-Spectrogram of the wav file, label 
         """        
         wave_tensor = self._generate_wav_tensor(wav_path)
         
@@ -121,22 +125,30 @@ class MelDataset(torch.utils.data.Dataset):
 
         return mel_tensor, label
 
-    def _preprocess(self, wave_tensor):
+    def _preprocess(self, wave_tensor: torch.Tensor) -> torch.Tensor:
+        """Convert to Mel-Spectrogram
+
+        Args:
+            wave_tensor (sample,1): Waveform
+
+        Returns:
+            (MelBand, T_Mel): Mel-Spectrogram of the waveform
+        """        
         mel_tensor = self.to_melspec(wave_tensor)
         mel_tensor = (torch.log(1e-5 + mel_tensor) - self.mean) / self.std
         return mel_tensor
 
-    def _generate_wav_tensor(self, wave_path: str) -> torch.tensor:
+    def _generate_wav_tensor(self, wave_path: str) -> torch.Tensor:
         """Private methods that trasform a wav file into a tensor
 
         Args:
             wave_path (str): path of the source wav file
 
         Returns:
-            torch.tensor: tensorial representation of source wav
+            (samples,1): tensorial representation of source wav
         """ 
         try:       
-            wave, sr = sf.read(wave_path)
+            wave, _ = sf.read(wave_path)
         except Exception as ex:
             print(ex)
             print(wave_path)
@@ -151,13 +163,31 @@ class Collater(object):
     """
 
     def __init__(self, return_wave=False):
+        """Constructor of the Collater
+        """        
         self.text_pad_index = 0
         self.return_wave = return_wave
         self.max_mel_length = 192
         self.mel_length_step = 16
         self.latent_dim = 16
 
-    def __call__(self, batch):
+    def __call__(self, batch: List) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """_summary_
+
+        Args:
+            batch (List[__getitem__]): A list of sample obtained from __getitem__ function.
+
+        Returns:
+            (
+                (N_Sample, NChannels, MelBand, T_Mel),
+                (N_Sample,),
+                (N_Sample, NChannels, MelBand, T_Mel),
+                (N_Sample, NChannels, MelBand, T_Mel),
+                (N_Sample,),
+                (N_Sample, NChannels, MelBand, T_Mel),
+                (N_Sample, NChannels, MelBand, T_Mel),
+            ): Look at *__getitem__* DocString, in addition the __call__ add 2 element that are 2 random sampled vector representing emotion_encoding
+        """        
         batch_size = len(batch)
         nmels = batch[0][0].size(0)
         mels = torch.zeros((batch_size, nmels, self.max_mel_length)).float()
@@ -187,14 +217,25 @@ class Collater(object):
         mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1)
         return mels, labels, ref_mels, ref2_mels, ref_labels, z_trg, z_trg2
 
-def build_dataloader(path_list,
-                     validation=False,
-                     batch_size=4,
-                     num_workers=1,
-                     device='cpu',
-                     collate_config={},
-                     dataset_config={}):
+def build_dataloader(path_list: str,
+                     validation: bool = False,
+                     batch_size:int = 4,
+                     num_workers:int = 1,
+                     device: str = 'cpu',
+                     collate_config: dict = {}) -> DataLoader:
+    """Make a dataloader
 
+    Args:
+        path_list (_type_): Path of the source dataset 
+        validation (bool, optional): Define if this dataloader will be used in a validation/test enviroment. Defaults to False.
+        batch_size (int, optional): Batch Size. Defaults to 4.
+        num_workers (int, optional): Number of Workers. Defaults to 1.
+        device (str, optional): Device. Defaults to 'cpu'.
+        collate_config (dict, optional): Flexible parameters. Defaults to {}.
+
+    Returns:
+        DataLoader: The pytorch dataloader
+    """    
     dataset = MelDataset(path_list, validation=validation)
     collate_fn = Collater(**collate_config)
     data_loader = DataLoader(dataset,
