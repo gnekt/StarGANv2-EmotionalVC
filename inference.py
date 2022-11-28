@@ -61,14 +61,14 @@ def build_model(model_params={}) -> Munch:
     return nets_ema
 
 
-def compute_style(speaker_dicts: Dict):
-    """_summary_
+def compute_style(speaker_dicts: Dict) -> Dict:
+    """Compute emotion embedding for given audio reference
 
     Args:
-        speaker_dicts (Dict): _description_
+        speaker_dicts (Dict): key: index, value: (Tuple) -> (audio path, emotion label)
 
     Returns:
-        _type_: _description_
+        Dict(key: Tuple(torch.Tensor,torch.Tensor)): ...value: (Tuple) -> (embedding, emotion label)
     """    
     reference_embeddings = {}
     for key, (path, speaker) in speaker_dicts.items():
@@ -138,8 +138,9 @@ converted_mels = {}
 
 for key, (ref, _) in reference_embeddings.items():
     with torch.no_grad():
-        f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1))
-        out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat)
+        f0_feat = F0_model.get_feature_GAN(source.unsqueeze(1)) # Out: (Batch, Channel, Features, T_Mel)
+        # Is not sure that Real T_Mel is equal to T_Mel_Fake cause the fake comes from the generator
+        out = starganv2.generator(source.unsqueeze(1), ref, F0=f0_feat) # Out: (Batch, Channel, MelBand, T_Mel_Fake)
 
         c = out.transpose(-1, -2).squeeze().to(DEVICE)
         y_out = vocoder.inference(c)
