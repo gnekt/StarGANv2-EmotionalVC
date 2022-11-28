@@ -49,7 +49,7 @@ class MelDataset(torch.utils.data.Dataset):
                  validation=False,
                  sep="|"                 
                  ):
-        """_summary_
+        """Constructor
 
         Args:
             dataset_path (str): _description_
