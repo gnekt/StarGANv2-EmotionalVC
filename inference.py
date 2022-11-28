@@ -4,35 +4,44 @@ import yaml
 from munch import Munch
 import numpy as np
 import torch
-from torch import nn
-import torch.nn.functional as F
 import torchaudio
 import librosa
-from Utils.ASR.models import ASRCNN
 from models import Generator, EmotionEncoder
 from dataset_maker.emotion_mapping import emotion_map
 import soundfile as sf
 import random 
+from typing import List, Dict, Tuple
 
-EMOTION_LABEL=[id for id,value in emotion_map.items()]
+# DO NOT TOUCH
+to_mel = torchaudio.transforms.MelSpectrogram(
+    n_mels=80, n_fft=2048, win_length=1200, hop_length=300)
+mean, std = -4, 4
+###########################################################
+
+# Variable
+EMOTION_LABEL=[id for id, _ in emotion_map.items()]
 MDOEL_PATH='Models/Experiment-3/ex_3_epoch.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
 DEVICE="cuda"
+##########################################################
 
-print("Start inference..")
-to_mel = torchaudio.transforms.MelSpectrogram(
-    n_mels=80, n_fft=2048, win_length=1200, hop_length=300)
-mean, std = -4, 4
+def preprocess(wave_tensor: torch.Tensor) -> torch.Tensor:
+    """Convert to Mel-Spectrogram
 
-def preprocess(wave):
-    wave_tensor = torch.from_numpy(wave).float()
+    Args:
+        wave_tensor (sample,1): Waveform
+
+    Returns:
+        (MelBand, T_Mel): Mel-Spectrogram of the waveform
+    """        
+    wave_tensor = torch.from_numpy(wave_tensor).float()
     mel_tensor = to_mel(wave_tensor)
     mel_tensor = (torch.log(1e-5 + mel_tensor.unsqueeze(0)) - mean) / std
     return mel_tensor
 
-def build_model(model_params={}):
+def build_model(model_params={}) -> Munch:
     args = Munch(model_params)
     generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf)
     emotion_encoder = EmotionEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
@@ -42,16 +51,26 @@ def build_model(model_params={}):
 
     return nets_ema
 
-def compute_style(speaker_dicts):
+def compute_style(speaker_dicts: Dict) -> torch.Tensor:
+    """Compute emotion embedding for given audio reference
+
+    Args:
+        speaker_dicts (Dict): key: index, value: (Tuple) -> (audio path, emotion label)
+
+    Returns:
+        (Batch, Embedding Dim): The embeddings
+    """    
     inputs = torch.zeros((len(speaker_dicts.items()),1,80,192))
     label = torch.zeros(len(speaker_dicts.items())).type(torch.LongTensor)
     for counter,(key, (path, speaker)) in enumerate(speaker_dicts.items()):
         wave, sr = librosa.load(path, sr=24000)
-        audio, index = librosa.effects.trim(wave, top_db=30)
+        wave, index = librosa.effects.trim(wave, top_db=30)
+        
         if sr != 24000:
             wave = librosa.resample(wave, sr, 24000)
         mel = preprocess(wave).to(DEVICE)
-        if mel.shape[2] >= 192: mel = mel[:,:,:192]
+        # If the audio reference is longer than T_Mel*Hop_Len(300) / 24e3 -> 2.4second
+        if mel.shape[2] >= 192: mel = mel[:,:,:192] 
         inputs[counter,0,:,:mel.shape[2]] = mel
         label[counter] = speaker
     with torch.no_grad():
@@ -67,6 +86,7 @@ vocoder = load_model("Vocoder/PreTrainedVocoder/checkpoint-400000steps.pkl").to(
 vocoder.remove_weight_norm()
 _ = vocoder.eval()
 
+# load neural model
 print("Load neural model..")
 with open('Models/Experiment-3/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
