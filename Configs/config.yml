@@ -1,4 +1,4 @@
-log_dir: "Models/Experiment-3"
+log_dir: "Models/Experiment-3-b"
 save_freq: 1
 device: "cuda:0"
 epochs: 150
@@ -11,7 +11,7 @@ dataset_maker:
   dataset_output_dir: "Data/"
 
 dataset_configuration:
-  data_separetor: ","
+  data_separetor: "|"
   data_header: ["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"]
   training_path: "Data/training_list.txt"
   validation_path: "Data/validation_list.txt" 

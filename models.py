@@ -236,7 +236,7 @@ class EmotionEncoder(nn.Module):
         self.shared = nn.Sequential(*blocks)
         self.lstm = nn.LSTM(96, 254, bidirectional=True, batch_first=True)
         self.encoder_fc = nn.Linear(254, style_dim)
-        self.encoder_fc_out = nn.Sigmoid()
+        self.encoder_fc_out = nn.LeakyReLU(0.2)
         
     def forward(self, x):
         """_summary_
