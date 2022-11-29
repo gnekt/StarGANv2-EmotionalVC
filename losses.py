@@ -49,7 +49,7 @@ def compute_d_loss(nets, args, x_real, y_org, y_trg, x_ref=None, use_r1_reg=True
     
     # with fake audios
     with torch.no_grad():
-        s_trg = nets.emotion_encoder(x_ref, y_trg)
+        s_trg = nets.emotion_encoder(x_ref)
         x_fake = nets.generator(x_real, s_trg, masks=None)
     out = nets.discriminator(x_fake, y_trg)
     loss_fake = adv_loss(out, 0)
@@ -84,7 +84,7 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=Fa
     x_ref, x_ref2 = x_refs
         
     # compute style vectors
-    s_trg = nets.emotion_encoder(x_ref, y_trg)
+    s_trg = nets.emotion_encoder(x_ref)
     
     # compute ASR/F0 features (real)
     with torch.no_grad():
@@ -107,17 +107,17 @@ def compute_g_loss(nets, args, x_real, y_org, y_trg, x_refs=None, use_adv_cls=Fa
     loss_asr = F.smooth_l1_loss(ASR_fake, ASR_real)
     
     # style reconstruction loss
-    s_pred = nets.emotion_encoder(x_fake, y_trg)
+    s_pred = nets.emotion_encoder(x_fake)
     loss_sty = torch.mean(torch.abs(s_pred - s_trg))
     
     # diversity sensitive loss
-    s_trg2 = nets.emotion_encoder(x_ref2, y_trg)
+    s_trg2 = nets.emotion_encoder(x_ref2)
     x_fake2 = nets.generator(x_real, s_trg2, masks=None)
     x_fake2 = x_fake2.detach()
     loss_ds = torch.mean(torch.abs(x_fake - x_fake2))
     
     # cycle-consistency loss
-    s_org = nets.emotion_encoder(x_real, y_org)
+    s_org = nets.emotion_encoder(x_real)
     x_rec = nets.generator(x_fake, s_org, masks=None)
     loss_cyc = torch.mean(torch.abs(x_rec - x_real))
     # ASR loss in cycle-consistency loss
