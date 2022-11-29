@@ -11,35 +11,76 @@ import os.path as osp
 
 import copy
 import math
+from typing import Tuple
 
 from munch import Munch
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from Utils.JDC.model import JDCNet
+from Utils.ASR.models import ASRCNN
 
 class DownSample(nn.Module):
-    def __init__(self, layer_type):
+    """DownSampling module
+    """    
+    def __init__(self, layer_type: str):
+        """Constructor
+
+        Args:
+            layer_type (str): Specify the behaviour of the downsampling procedure.
+        
+        **Assert** layer_type must be a value in ["none","timepreserve","half"]
+        """        
         super().__init__()
+        assert(layer_type in ["none","timepreserve","half"])
         self.layer_type = layer_type
 
-    def forward(self, x):
-        if self.layer_type == 'none':
-            return x
-        elif self.layer_type == 'timepreserve':
-            return F.avg_pool2d(x, (2, 1))
-        elif self.layer_type == 'half':
-            return F.avg_pool2d(x, 2)
-        else:
-            raise RuntimeError('Got unexpected donwsampletype %s, expected is [none, timepreserve, half]' % self.layer_type)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method
 
+        Args:
+            x (torch.Tensor): _description_
+
+        Raises:
+            RuntimeError: _description_
+
+        Returns:
+            torch.Tensor: _description_
+        """        
+        if self.layer_type == 'timepreserve':
+            return F.avg_pool2d(x, (2, 1))
+        if self.layer_type == 'half':
+            return F.avg_pool2d(x, 2)
+        return x
 
 class UpSample(nn.Module):
-    def __init__(self, layer_type):
+    """UpSampling Module
+    """    
+    def __init__(self, layer_type: str):
+        """Constructor
+
+        Args:   
+            layer_type (str): Specify the behaviour of the downsampling procedure.
+        
+        **Assert** layer_type must be a value in ["none","timepreserve","half"] 
+        """        
         super().__init__()
+        assert(layer_type in ["none","timepreserve","half"])
         self.layer_type = layer_type
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """_summary_
+
+        Args:
+            x (torch.Tensor): _description_
+
+        Raises:
+            RuntimeError: _description_
+
+        Returns:
+            torch.Tensor: _description_
+        """        
         if self.layer_type == 'none':
             return x
         elif self.layer_type == 'timepreserve':
@@ -51,25 +92,46 @@ class UpSample(nn.Module):
 
 
 class ResBlk(nn.Module):
-    def __init__(self, dim_in, dim_out, actv=nn.LeakyReLU(0.2),
-                    normalize=False, downsample='none'):
+    """Residual block definition
+    """    
+    def __init__(self, 
+                 dim_in: int, 
+                 dim_out: int, 
+                 actv: torch.nn = nn.LeakyReLU(0.2),
+                 normalize: bool = False, 
+                 downsample: str = 'none'):
+        """Constructor
+
+        Args:
+            dim_in (int): Number of input channels
+            dim_out (int): Number of output channels
+            actv (torch.nn, optional): Activation function. Defaults to nn.LeakyReLU(0.2).
+            normalize (bool, optional): True-> Yes, False-> No. Defaults to False.
+            downsample (str, optional): If downsampling is needed for this module. Defaults to 'none'. Values admitted ['timepreserve', 'half']
+        """        
         super().__init__()
         self.actv = actv
         self.normalize = normalize
-        self.downsample = DownSample(downsample)
-        self.learned_sc = dim_in != dim_out
+        self.downsample: DownSample = DownSample(downsample)
+        self.learned_sc: bool = dim_in != dim_out # If the Nr. in-channels != Nr. out-channels, we need an interface
         self._build_weights(dim_in, dim_out)
 
-    def _build_weights(self, dim_in, dim_out):
+    def _build_weights(self, dim_in: int, dim_out: int):
+        """ Method that initialize the component of the block
+
+        Args:
+            dim_in (int): Nr. of input channels
+            dim_out (int): Nr. of output channels
+        """
         self.conv1 = nn.Conv2d(dim_in, dim_in, 3, 1, 1)
         self.conv2 = nn.Conv2d(dim_in, dim_out, 3, 1, 1)
         if self.normalize:
-            self.norm1 = nn.InstanceNorm2d(dim_in, affine=True)
-            self.norm2 = nn.InstanceNorm2d(dim_in, affine=True)
+            self.norm1 = nn.InstanceNorm2d(dim_in, affine=True) # True: learnable affine parameters
+            self.norm2 = nn.InstanceNorm2d(dim_in, affine=True) # True: learnable affine parameters
         if self.learned_sc:
-            self.conv1x1 = nn.Conv2d(dim_in, dim_out, 1, 1, 0, bias=False)
+            self.conv1x1 = nn.Conv2d(dim_in, dim_out, 1, 1, 0, bias=False) # from dim_in to dim_out
 
-    def _shortcut(self, x):
+    def _shortcut(self, x: torch.Tensor) -> torch.Tensor:
         if self.learned_sc:
             x = self.conv1x1(x)
         if self.downsample:
@@ -93,12 +155,20 @@ class ResBlk(nn.Module):
         return x / math.sqrt(2)  # unit variance
 
 class AdaIN(nn.Module):
-    def __init__(self, style_dim, num_features):
+    """Adaptive Instance Module
+    """    
+    def __init__(self, style_dim: int, num_features: int):
+        """_summary_
+
+        Args:
+            style_dim (int): N-features of style embedding
+            num_features (int): N-features of the adaptive module
+        """        
         super().__init__()
-        self.norm = nn.InstanceNorm2d(num_features, affine=False)
+        self.norm = nn.InstanceNorm2d(num_features, affine=False) # False: NOT learnable affine parameters
         self.fc = nn.Linear(style_dim, num_features*2)
 
-    def forward(self, x, s):
+    def forward(self, x: torch.Tensor, s: torch.Tensor):
         h = self.fc(s)
         h = h.view(h.size(0), h.size(1), 1, 1)
         gamma, beta = torch.chunk(h, chunks=2, dim=1)
@@ -106,21 +176,43 @@ class AdaIN(nn.Module):
 
 
 class AdainResBlk(nn.Module):
-    def __init__(self, dim_in, dim_out, style_dim=64, w_hpf=0,
-                    actv=nn.LeakyReLU(0.2), upsample='none'):
+    def __init__(self, 
+                 dim_in: int, 
+                 dim_out: int, 
+                 style_dim: int = 64, 
+                 w_hpf: int = 0,
+                 actv: torch.nn = nn.LeakyReLU(0.2), 
+                 upsample: str = 'none'):
+        """Constructor
+
+        Args:
+            dim_in (int): Number of input channels
+            dim_out (int): Number of output channels
+            style_dim (int): N-feature of style embedding
+            w_hpf (int): Weight of high pass filter
+            actv (torch.nn, optional): Activation function. Defaults to nn.LeakyReLU(0.2).
+            upsampling (str, optional): If upsampling is needed for this module. Defaults to 'none'. Values admitted ['timepreserve', 'half']
+        """
         super().__init__()
         self.w_hpf = w_hpf
         self.actv = actv
         self.upsample = UpSample(upsample)
-        self.learned_sc = dim_in != dim_out
+        self.learned_sc = dim_in != dim_out # If the Nr. in-channels != Nr. out-channels, we need an interface
         self._build_weights(dim_in, dim_out, style_dim)
 
-    def _build_weights(self, dim_in, dim_out, style_dim=64):
+    def _build_weights(self, dim_in: int, dim_out: int, style_dim: int = 64):
+        """Initialize component of the module
+
+        Args:
+            dim_in (int): Number of input channels
+            dim_out (int): Number of output channels
+            style_dim (int): N-feature of style embedding
+        """        
         self.conv1 = nn.Conv2d(dim_in, dim_out, 3, 1, 1)
         self.conv2 = nn.Conv2d(dim_out, dim_out, 3, 1, 1)
         self.norm1 = AdaIN(style_dim, dim_in)
         self.norm2 = AdaIN(style_dim, dim_out)
-        if self.learned_sc:
+        if self.learned_sc: 
             self.conv1x1 = nn.Conv2d(dim_in, dim_out, 1, 1, 0, bias=False)
 
     def _shortcut(self, x):
@@ -159,9 +251,20 @@ class HighPass(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, dim_in=48, style_dim=48, max_conv_dim=48*8, w_hpf=1, F0_channel=0):
-        super().__init__()
+    """Generator Module
+    """    
+    def __init__(self, dim_in: int = 48, style_dim: int = 48, max_conv_dim: int = 48*8, w_hpf: int = 1, F0_channel: int = 0):
+        """_summary_
 
+        Args:
+            dim_in (int, optional): N_Channel in input of the Generator (think at it as an interface from outside to generator). Defaults to 48.
+            style_dim (int, optional): N-Features of Style Embedding. Defaults to 48.
+            max_conv_dim (int, optional): Max number of channel for a convolutional block. Defaults to 48*8.
+            w_hpf (int, optional): Weight of the High Pass Filter. Defaults to 1.
+            F0_channel (int, optional): N-feature that F0 propose as output. Defaults to 0.
+        """        
+        
+        super().__init__()
         self.stem = nn.Conv2d(1, dim_in, 3, 1, 1)
         self.encode = nn.ModuleList()
         self.decode = nn.ModuleList()
@@ -170,11 +273,11 @@ class Generator(nn.Module):
             nn.LeakyReLU(0.2),
             nn.Conv2d(dim_in, 1, 1, 1, 0))
         self.F0_channel = F0_channel
+        
         # down/up-sampling blocks
         repeat_num = 4 #int(np.log2(img_size)) - 4
         if w_hpf > 0:
             repeat_num += 1
-
         for lid in range(repeat_num):
             if lid in [1, 3]:
                 _downtype = 'timepreserve'
@@ -239,7 +342,17 @@ class Generator(nn.Module):
 
 
 class MappingNetwork(nn.Module):
-    def __init__(self, latent_dim=16, style_dim=48, num_domains=2, hidden_dim=384):
+    """Mapping network module
+    """    
+    def __init__(self, latent_dim: int = 16, style_dim: int = 48, num_domains: int = 2, hidden_dim: int = 384):
+        """Constructor
+
+        Args:
+            latent_dim (int, optional): _description_. Defaults to 16.
+            style_dim (int, optional): _description_. Defaults to 48.
+            num_domains (int, optional): _description_. Defaults to 2.
+            hidden_dim (int, optional): _description_. Defaults to 384.
+        """        
         super().__init__()
         layers = []
         layers += [nn.Linear(latent_dim, hidden_dim)]
@@ -271,7 +384,17 @@ class MappingNetwork(nn.Module):
 
 
 class StyleEncoder(nn.Module):
-    def __init__(self, dim_in=48, style_dim=48, num_domains=2, max_conv_dim=384):
+    """Style encoder module
+    """    
+    def __init__(self, dim_in: int = 48, style_dim: int = 48, num_domains: int = 2, max_conv_dim: int = 384):
+        """Constructor
+
+        Args:
+            dim_in (int, optional): N_Channel in input of the StyleEncoder (think at it as an interface from outside to stylencoder). Defaults to 48.
+            style_dim (int, optional): N-features of the style embedding. Defaults to 48.
+            num_domains (int, optional): Number of domains that the style encoder has to take into account. Defaults to 2.
+            max_conv_dim (int, optional): Max number of convolutional features map. Defaults to 384.
+        """        
         super().__init__()
         blocks = []
         blocks += [nn.Conv2d(1, dim_in, 3, 1, 1)]
@@ -367,14 +490,24 @@ class Discriminator2d(nn.Module):
         return out
 
 
-def build_model(args, F0_model, ASR_model):
+def build_model(args: Munch, F0_model: JDCNet, ASR_model: ASRCNN) -> Tuple[Munch,Munch]:
+    """Methon that given Model properties and submodule, produce the model net
+
+    Args:
+        args (Munch): Net paramenter
+        F0_model (JDCNet): JDCNet Model
+        ASR_model (ASRCNN): ASRCNN Model
+
+    Returns:
+        (Munch, Munch): Tuple containing 2 Model Copy, one for training, one for inference.
+    """    
     generator = Generator(args.dim_in, args.style_dim, args.max_conv_dim, w_hpf=args.w_hpf, F0_channel=args.F0_channel)
     mapping_network = MappingNetwork(args.latent_dim, args.style_dim, args.num_domains, hidden_dim=args.max_conv_dim)
     style_encoder = StyleEncoder(args.dim_in, args.style_dim, args.num_domains, args.max_conv_dim)
     discriminator = Discriminator(args.dim_in, args.num_domains, args.max_conv_dim, args.n_repeat)
-    generator_ema = copy.deepcopy(generator)
-    mapping_network_ema = copy.deepcopy(mapping_network)
-    style_encoder_ema = copy.deepcopy(style_encoder)
+    generator_ema: Generator = copy.deepcopy(generator)
+    mapping_network_ema: MappingNetwork = copy.deepcopy(mapping_network)
+    style_encoder_ema: StyleEncoder = copy.deepcopy(style_encoder)
         
     nets = Munch(generator=generator,
                 mapping_network=mapping_network,
