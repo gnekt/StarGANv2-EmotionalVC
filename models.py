@@ -248,14 +248,8 @@ class EmotionEncoder(nn.Module):
         blocks += [nn.LeakyReLU(0.2)]
         blocks += [nn.AdaptiveAvgPool2d((1,None))]
         self.shared = nn.Sequential(*blocks)
-        self.emotion_fc = nn.Linear(4, 254)
-        self.emotion_fc_out = nn.Sigmoid()
         self.lstm = nn.LSTM(96, 254, bidirectional=True, batch_first=True)
-        self.b1_fc = nn.Linear(254, 127)
-        self.b1_fc_out = nn.Sigmoid()
-        self.b2_fc = nn.Linear(254, 127)
-        self.b2_fc_out = nn.Sigmoid()
-        self.encoder_fc = nn.Linear(127, style_dim)
+        self.encoder_fc = nn.Linear(254, style_dim)
         self.encoder_fc_out = nn.Sigmoid()
         
     def forward(self, x, y):
@@ -276,12 +270,8 @@ class EmotionEncoder(nn.Module):
         emotion_fc_linear = self.emotion_fc(y)
         emotion_fc_out = self.emotion_fc_out(emotion_fc_linear)
         emotion_fc_out = torch.cat((emotion_fc_out.unsqueeze(0),emotion_fc_out.unsqueeze(0)),0) # (2*LSTM, Emotions, T_step)
-        lstm_out = self.lstm(h,(emotion_fc_out, emotion_fc_out))
-        b1_fc_linear = self.b1_fc(lstm_out[0][:,-1,:254])
-        b2_fc_linear = self.b2_fc(lstm_out[0][:,-1,254:])
-        b1_fc_out = self.b1_fc_out(b1_fc_linear)
-        b2_fc_out = self.b2_fc_out(b2_fc_linear)
-        b1_b2_ = torch.add(b1_fc_out, b2_fc_out)
+        lstm_out = self.lstm(h)
+        b1_b2_ = torch.add(lstm_out[0][:,-1,:254], lstm_out[0][:,-1,254:])
         emotion_encoding = self.encoder_fc(b1_b2_)
         emotion_encoding = self.encoder_fc_out(emotion_encoding)
         return emotion_encoding

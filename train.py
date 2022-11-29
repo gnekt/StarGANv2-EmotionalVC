@@ -129,8 +129,9 @@ def main(config_path):
             else:
                 for v in value:
                     writer.add_figure('eval_spec', v, epoch)
-        if (epoch % save_freq) == 0:
-            trainer.save_checkpoint(osp.join(log_dir, 'ex_3_epoch.pth'))
+        trainer.save_checkpoint(osp.join(log_dir, 'ex_4_backup.pth'))
+        if epoch in [50,100,149]:
+            trainer.save_checkpoint(osp.join(log_dir, f'ex_4_{epoch}.pth'))
     return 0
 
 if __name__=="__main__":
