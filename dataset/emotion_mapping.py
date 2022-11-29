@@ -1,6 +1,10 @@
 emotion_map = {
-    "neutral":0,
+    "sad":1,
     "anger":1,
     "happy":2,
-    "sad":3
+    "neutral":0,
+    "surprised":2,
+    "fearful":1,
+    "disgust":1,
+    "calm":2
 }
