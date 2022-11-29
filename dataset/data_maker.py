@@ -53,7 +53,10 @@ for index, group in training_dataframe.groupby(["dataset","actor_id","statement_
     # neutral_row_path = f"./{neutral_row['lang']}/{neutral_row['dataset']}/{neutral_row['path'][2:]}"
     for index,row in emotional_df.iterrows():
         row['path'] = f"{row['path']}"
-        row['emotion']=emotion_map[row['emotion']]
+        try:
+            row['emotion']=emotion_map[row['emotion']]
+        except Exception as ex:
+            continue
         try:
             emotional_row_path = f"./{row['lang']}/{row['dataset']}/{row['path'][2:]}"
             training_file.write(f"{neutral_row['actor_id']}|{neutral_row['statement_id']}|{neutral_row['path']}|0|{row['path']}|{row['emotion']}\n")
@@ -75,8 +78,11 @@ for index, group in validation_dataframe.groupby(["dataset","actor_id","statemen
     
     # neutral_row_path = f"./{neutral_row['lang']}/{neutral_row['dataset']}/{neutral_row['path'][2:]}"
     for index,row in emotional_df.iterrows():
-        row['path'] = f"./dataset/{row['path'][2:]}"
-        row['emotion']=emotion_map[row['emotion']]
+        row['path'] = f"{row['path']}"
+        try:
+            row['emotion']=emotion_map[row['emotion']]
+        except Exception as ex:
+            continue
         try:
             emotional_row_path = f"./{row['lang']}/{row['dataset']}/{row['path'][2:]}"
             validation_file.write(f"{neutral_row['actor_id']}|{neutral_row['statement_id']}|{neutral_row['path']}|0|{row['path']}|{row['emotion']}\n")
@@ -91,7 +97,10 @@ for index, group in validation_dataframe.groupby(["emotion"]):
     _reduced_group = group[:50]
     # neutral_row_path = f"./{neutral_row['lang']}/{neutral_row['dataset']}/{neutral_row['path'][2:]}"
     for index,row in _reduced_group.iterrows():
-        row['emotion']=emotion_map[row['emotion']]
+        try:
+            row['emotion']=emotion_map[row['emotion']]
+        except Exception as ex:
+            continue
         try:
             embedding_test_file.write(f"{row['path']}|{row['emotion']}\n")
         except IOError as e:
