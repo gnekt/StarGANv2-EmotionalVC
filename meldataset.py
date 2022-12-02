@@ -206,12 +206,9 @@ class Collater(object):
             
             labels[bid] = label
             ref_labels[bid] = ref_label
-
-        z_trg = torch.randn(batch_size, self.latent_dim)
-        z_trg2 = torch.randn(batch_size, self.latent_dim)
         
         mels, ref_mels, ref2_mels = mels.unsqueeze(1), ref_mels.unsqueeze(1), ref2_mels.unsqueeze(1)
-        return mels, labels, ref_mels, ref2_mels, ref_labels, z_trg, z_trg2
+        return mels, labels, ref_mels, ref2_mels, ref_labels
 
 def build_dataloader(dataset_path: str,
                      dataset_configuration: Dict,
