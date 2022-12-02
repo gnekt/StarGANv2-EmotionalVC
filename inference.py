@@ -20,11 +20,11 @@ mean, std = -4, 4
 
 # Variable
 EMOTION_LABEL=[id for id, _ in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-3/ex_3_epoch.pth'
+MDOEL_PATH='Models/Experiment-3-b/ex_3_b_backup.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
-DEVICE="cuda"
+DEVICE="cuda:1"
 ##########################################################
 
 def preprocess(wave_tensor: torch.Tensor) -> torch.Tensor:
@@ -75,7 +75,7 @@ def compute_style(speaker_dicts: Dict) -> torch.Tensor:
         label[counter] = speaker
     with torch.no_grad():
         label = label.to("cuda")
-        embeddings = starganv2.emotion_encoder(inputs.to("cuda"), label)
+        embeddings = starganv2.emotion_encoder(inputs.to("cuda:1"))
     
     return embeddings
 
