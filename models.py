@@ -257,8 +257,8 @@ class EmotionEncoder(nn.Module):
         y = F.one_hot(torch.arange(0, 4)).type(torch.FloatTensor).to("cuda:0")[y]
         h = self.shared(x)
 
-        h = h.squeeze(2) # (Batch, Channels, ChannelDim)
-
+        h = h.squeeze(2) # (Batch, Channels, T_frame)
+        h = h.permute(0,2,1) # (Batch, T_frame, Channels)
         emotion_fc_linear = self.emotion_fc(y)
         emotion_fc_out = self.emotion_fc_out(emotion_fc_linear)
         emotion_fc_out = torch.cat((emotion_fc_out.unsqueeze(0),emotion_fc_out.unsqueeze(0)),0) # (2*LSTM, Emotions, T_step)
