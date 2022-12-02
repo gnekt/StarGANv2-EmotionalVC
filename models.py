@@ -254,7 +254,7 @@ class EmotionEncoder(nn.Module):
         Returns:
             _type_: _description_
         """        
-        y = F.one_hot(torch.arange(0, 4)).type(torch.FloatTensor).to("cuda:0")[y]
+        y = F.one_hot(torch.arange(0, 4)).type(torch.FloatTensor).to("cuda")[y]
         h = self.shared(x)
 
         h = h.squeeze(2) # (Batch, Channels, T_frame)
