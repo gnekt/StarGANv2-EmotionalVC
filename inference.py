@@ -7,7 +7,6 @@ import torch
 import torchaudio
 import librosa
 from models import Generator, EmotionEncoder
-from dataset_maker.emotion_mapping import emotion_map
 import soundfile as sf
 import random 
 from typing import List, Dict, Tuple
@@ -16,15 +15,20 @@ from typing import List, Dict, Tuple
 to_mel = torchaudio.transforms.MelSpectrogram(
     n_mels=80, n_fft=2048, win_length=1200, hop_length=300)
 mean, std = -4, 4
+
+emotion_map={
+    "positive":2,
+    "negative":1
+}
 ###########################################################
 
 # Variable
 EMOTION_LABEL=[id for id, _ in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-3/ex_3_epoch.pth'
+MDOEL_PATH='Models/Experiment-3-b/ex_3_b_backup.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
-DEVICE="cuda"
+DEVICE="cuda:1"
 ##########################################################
 
 def preprocess(wave_tensor: torch.Tensor) -> torch.Tensor:
@@ -75,7 +79,7 @@ def compute_style(speaker_dicts: Dict) -> torch.Tensor:
         label[counter] = speaker
     with torch.no_grad():
         label = label.to("cuda")
-        embeddings = starganv2.emotion_encoder(inputs.to("cuda"), label)
+        embeddings = starganv2.emotion_encoder(inputs.to("cuda:1"))
     
     return embeddings
 
@@ -88,7 +92,7 @@ _ = vocoder.eval()
 
 # load neural model
 print("Load neural model..")
-with open('Models/Experiment-3/config.yml') as f:
+with open('Models/Experiment-3-b/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
 params = torch.load(MDOEL_PATH, map_location='cuda')
@@ -112,7 +116,6 @@ for index,val in emotion_map.items():
 
 reference_embeddings = compute_style(emotion_ref)
 
-
 # conversion 
 import time
 start = time.time()
@@ -125,9 +128,8 @@ converted_mels = {}
 
 
 converted_samples = {
-    "anger":1,
-    "happy":2,
-    "sad":3
+    "negative":1,
+    "positive":2
 }
 
 with torch.no_grad():
@@ -143,7 +145,6 @@ print('total processing time: %.3f sec' % (end - start) )
 
 for key, wave in converted_samples.items():
     emotion=key
-    rnd_number=random.randint(1,999)+random.randint(1,999)
     print('Converted: %s' % key)
     print("storing sample..")
-    sf.write(f'./Demo/out/{emotion}/{rnd_number}.wav', wave, SAMPLE_RATE)
+    sf.write(f'./Demo/out/{emotion}/ex_3_b.wav', wave, SAMPLE_RATE)
