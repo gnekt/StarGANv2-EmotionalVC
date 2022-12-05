@@ -24,7 +24,7 @@ emotion_map={
 
 # Variable
 EMOTION_LABEL=[id for id, _ in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-3-b/ex_3_b_backup.pth'
+MDOEL_PATH='Models/Experiment-3-b/ex_3_c_backup.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
@@ -92,7 +92,7 @@ _ = vocoder.eval()
 
 # load neural model
 print("Load neural model..")
-with open('Models/Experiment-3-b/config.yml') as f:
+with open('Models/Experiment-3-c/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
 params = torch.load(MDOEL_PATH, map_location='cuda')
