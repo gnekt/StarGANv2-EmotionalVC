@@ -234,7 +234,7 @@ class EmotionEncoder(nn.Module):
         blocks += [nn.LeakyReLU(0.2)]
         blocks += [nn.AdaptiveAvgPool2d((1,None))]
         self.shared = nn.Sequential(*blocks)
-        self.lstm = nn.LSTM(96, 254, bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(512, 254, bidirectional=True, batch_first=True)
         self.encoder_fc = nn.Linear(254, style_dim)
         self.encoder_fc_out = nn.LeakyReLU(0.2)
         
@@ -249,8 +249,8 @@ class EmotionEncoder(nn.Module):
         """        
         h = self.shared(x)
 
-        h = h.squeeze(2) # (Batch, Channels, ChannelDim)
-
+        h = h.squeeze(2) # (Batch, Channels, T_time)
+        h = h.permute(0,2,1)
         lstm_out = self.lstm(h)
         b1_b2_ = torch.add(lstm_out[0][:,-1,:254], lstm_out[0][:,-1,254:])
         emotion_encoding = self.encoder_fc(b1_b2_)
