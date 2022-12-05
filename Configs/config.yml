@@ -1,4 +1,4 @@
-log_dir: "Models/Experiment-3-c"
+log_dir: "Models/Experiment-3-d"
 save_freq: 1
 device: "cuda:0"
 epochs: 150
