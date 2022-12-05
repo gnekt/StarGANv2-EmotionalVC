@@ -6,8 +6,6 @@ Vocoder/*
 dataset/*
 datasets/*
 Models/*
-*.wav
-Demo/*
 *.pyc
 __pycache__/*
 download.ipynb
