@@ -236,7 +236,6 @@ class EmotionEncoder(nn.Module):
         self.shared = nn.Sequential(*blocks)
         self.lstm = nn.LSTM(512, 254, bidirectional=True, batch_first=True)
         self.encoder_fc = nn.Linear(254, style_dim)
-        self.encoder_fc_out = nn.LeakyReLU(0.2)
         
     def forward(self, x):
         """_summary_
@@ -254,7 +253,6 @@ class EmotionEncoder(nn.Module):
         lstm_out = self.lstm(h)
         b1_b2_ = torch.add(lstm_out[0][:,-1,:254], lstm_out[0][:,-1,254:])
         emotion_encoding = self.encoder_fc(b1_b2_)
-        emotion_encoding = self.encoder_fc_out(emotion_encoding)
         return emotion_encoding
 
 class Discriminator(nn.Module):

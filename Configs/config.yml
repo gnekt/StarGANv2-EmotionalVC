@@ -41,7 +41,7 @@ model_params:
 
 loss_params:
   g_loss:
-    lambda_sty: 1.
+    lambda_sty: 20.
     lambda_cyc: 5.
     lambda_ds: 1.
     lambda_norm: 1.
