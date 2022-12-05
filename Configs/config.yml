@@ -3,7 +3,7 @@ save_freq: 1
 device: "cuda:1"
 epochs: 150
 batch_size: 5
-pretrained_model: ""
+pretrained_model: "Models/Experiment-3-d/ex_3_d_backup.pth"
 load_only_params: false
 fp16_run: true
 
