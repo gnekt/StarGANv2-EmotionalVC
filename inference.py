@@ -24,11 +24,11 @@ emotion_map={
 
 # Variable
 EMOTION_LABEL=[id for id, _ in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-3-b/ex_3_c_backup.pth'
+MDOEL_PATH='Models/Experiment-3-c/ex_3_c_backup.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
-DEVICE="cuda:1"
+DEVICE="cuda"
 ##########################################################
 
 def preprocess(wave_tensor: torch.Tensor) -> torch.Tensor:
@@ -79,7 +79,7 @@ def compute_style(speaker_dicts: Dict) -> torch.Tensor:
         label[counter] = speaker
     with torch.no_grad():
         label = label.to("cuda")
-        embeddings = starganv2.emotion_encoder(inputs.to("cuda:1"))
+        embeddings = starganv2.emotion_encoder(inputs.to("cuda"))
     
     return embeddings
 
@@ -147,4 +147,4 @@ for key, wave in converted_samples.items():
     emotion=key
     print('Converted: %s' % key)
     print("storing sample..")
-    sf.write(f'./Demo/out/{emotion}/ex_3_b.wav', wave, SAMPLE_RATE)
+    sf.write(f'./Demo/out/{emotion}/ex_3_c.wav', wave, SAMPLE_RATE)
