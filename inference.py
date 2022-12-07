@@ -24,11 +24,11 @@ emotion_map={
 
 # Variable
 EMOTION_LABEL=[id for id, _ in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-3-c/ex_3_c_backup.pth'
+MDOEL_PATH='Models/Experiment-3-d/ex_3_d_backup.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
-DEVICE="cuda"
+DEVICE="cuda:1"
 ##########################################################
 
 def preprocess(wave_tensor: torch.Tensor) -> torch.Tensor:
@@ -78,8 +78,7 @@ def compute_style(speaker_dicts: Dict) -> torch.Tensor:
         inputs[counter,0,:,:mel.shape[2]] = mel
         label[counter] = speaker
     with torch.no_grad():
-        label = label.to("cuda")
-        embeddings = starganv2.emotion_encoder(inputs.to("cuda"))
+        embeddings = starganv2.emotion_encoder(inputs.to("cuda:1"))
     
     return embeddings
 
@@ -92,10 +91,10 @@ _ = vocoder.eval()
 
 # load neural model
 print("Load neural model..")
-with open('Models/Experiment-3-c/config.yml') as f:
+with open('Models/Experiment-3-d/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
-params = torch.load(MDOEL_PATH, map_location='cuda')
+params = torch.load(MDOEL_PATH, map_location='cuda:1')
 params = params['model_ema']
 _ = [starganv2[key].load_state_dict(params[key]) for key in starganv2]
 _ = [starganv2[key].eval() for key in starganv2]
@@ -147,4 +146,4 @@ for key, wave in converted_samples.items():
     emotion=key
     print('Converted: %s' % key)
     print("storing sample..")
-    sf.write(f'./Demo/out/{emotion}/ex_3_c.wav', wave, SAMPLE_RATE)
+    sf.write(f'./Demo/out/{emotion}/ex_3_d.wav', wave, SAMPLE_RATE)
