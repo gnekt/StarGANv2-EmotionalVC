@@ -1,9 +1,9 @@
-log_dir: "Models/Experiment-3-d"
+log_dir: "Models/Experiment-6-Happy"
 save_freq: 1
-device: "cuda:1"
+device: "cuda:0"
 epochs: 150
 batch_size: 5
-pretrained_model: "Models/Experiment-3-d/ex_3_d_backup.pth"
+pretrained_model: ""
 load_only_params: false
 fp16_run: true
 
@@ -33,7 +33,7 @@ model_params:
   dim_in: 64
   style_dim: 64
   latent_dim: 16
-  num_domains: 3
+  num_domains: 2
   max_conv_dim: 512
   n_repeat: 4
   w_hpf: 0
