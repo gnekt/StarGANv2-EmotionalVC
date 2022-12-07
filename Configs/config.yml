@@ -1,4 +1,4 @@
-log_dir: "Models/Experiment-6-Happy"
+log_dir: "Models/Experiment-6-Sad"
 save_freq: 1
 device: "cuda:0"
 epochs: 150
