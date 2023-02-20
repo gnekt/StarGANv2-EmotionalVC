@@ -1,4 +1,4 @@
-log_dir: "Models/Experiment-2"
+log_dir: "Models/Experiment-7"
 save_freq: 10
 device: "cuda"
 epochs: 150
@@ -12,7 +12,7 @@ dataset_maker:
 
 dataset_configuration:
   data_separetor: ","
-  data_header: ["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"]
+  data_header: ["dataset","lang","path","actor_id","gender","emotion","statement_id"]
   training_path: "Data/training_list.txt"
   validation_path: "Data/validation_list.txt" 
   training_set_percentage: 80

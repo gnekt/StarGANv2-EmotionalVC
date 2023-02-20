@@ -87,16 +87,15 @@ class MelDataset(torch.utils.data.Dataset):
                int 
             ): (Source Spectrogram, Source label, Reference Spectrogram, Reference2 Spectrogram, Reference Label)
         """  
-        if self.dataset.iloc[idx]["already_used"]:
-            raise IndexError("")
         row = self.dataset.iloc[idx]
-        emotion = row["reference_emotion"]
-        self.dataset.iloc[idx]["already_used"] = True
-        mel_tensor, label = self._load_data(row["source_path"], row["source_emotion"])
-        ref_mel_tensor, ref_label = self._load_data(row["reference_path"],row["reference_emotion"])
+        ref_rows = self.dataset[(self.dataset["actor_id"] == row["actor_id"]) & (self.dataset["dataset"]==row["dataset"]) & (self.dataset["path"] != row["path"])]
+        ref_row = ref_rows.sample(frac=1).iloc[0]
+        mel_tensor, label = self._load_data(row["path"], row["emotion"])
+        ref_mel_tensor, ref_label = self._load_data(ref_row["path"], ref_row["emotion"])
         
-        ref2 = self.dataset[self.dataset["reference_emotion"] == emotion].sample(n=1).iloc[0]
-        ref2_mel_tensor, ref2_mel_label = self._load_data(ref2["reference_path"])
+        ref_rows2 = self.dataset[(self.dataset["actor_id"] == row["actor_id"]) & (self.dataset["dataset"]==row["dataset"]) & (self.dataset["path"] != ref_row["path"])]
+        ref2_row = ref_rows2.sample(frac=1).iloc[0]
+        ref2_mel_tensor, _ = self._load_data(ref2_row["path"])
         return mel_tensor, label, ref_mel_tensor, ref2_mel_tensor, ref_label
     
     def _load_data(self, wav_path: str, label: int = emotion_map["neutral"]) -> Tuple[torch.Tensor, int]:
@@ -118,8 +117,7 @@ class MelDataset(torch.utils.data.Dataset):
         mel_tensor = self.to_melspec(wave_tensor)
         mel_tensor = (torch.log(1e-5 + mel_tensor) - self.mean) / self.std
         mel_length = mel_tensor.size(1)
-        # HP. source and reference audio, since the statement is the same, so same phoneme, the duration will be the same.
-        # The cut will happen for source and reference
+        
         if mel_length > self.max_mel_length:
             random_start = np.random.randint(0, mel_length - self.max_mel_length)
             mel_tensor = mel_tensor[:, random_start:random_start + self.max_mel_length]
@@ -204,8 +202,8 @@ class Collater(object):
             ref2_mel_size = ref2_mel.size(1)
             ref2_mels[bid, :, :ref2_mel_size] = ref2_mel
             
-            labels[bid] = label
-            ref_labels[bid] = ref_label
+            labels[bid] = torch.tensor(int(label))
+            ref_labels[bid] = torch.tensor(int(ref_label))
 
         z_trg = torch.randn(batch_size, self.latent_dim)
         z_trg2 = torch.randn(batch_size, self.latent_dim)

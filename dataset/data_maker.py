@@ -40,6 +40,10 @@ dataframe = pd.read_csv("dataset/dataset.csv", sep=";").sample(frac=1)
 training_dataframe = dataframe.iloc[0:int((dataframe.shape[0]*training_set_percentage)/100)]
 validation_dataframe = dataframe.iloc[dataframe.shape[0]-int((dataframe.shape[0]*validation_set_percentage)/100):]
 
+
+
+training_dataframe.to_csv("Data/training_list.txt",sep=",",index=False)
+validation_dataframe.to_csv("Data/validation_list.txt",sep=",",index=False)
 # # Create training file
 # for index, group in training_dataframe.groupby(["dataset","actor_id","statement_id"]):
 #     emotional_df = group[dataframe["emotion"] != "neutral"]
@@ -82,19 +86,19 @@ validation_dataframe = dataframe.iloc[dataframe.shape[0]-int((dataframe.shape[0]
 #             print(e)
 # validation_file.close()
 
-dataframe = pd.read_csv("Data/validation_list.txt", sep=",", names=["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"])
-embedding_test_file = open("Data/emotion_embedding_test_file.txt","w")
-# Create validation file
-for index, group in dataframe.groupby(["source_emotion"]):
-    _reduced_group = group[:50]
-    # neutral_row_path = f"./{neutral_row['lang']}/{neutral_row['dataset']}/{neutral_row['path'][2:]}"
-    for index,row in _reduced_group.iterrows():
-        row['path'] = f"./{row['source_path'][2:]}"
-        row['emotion']=row['source_emotion']
-        try:
-            embedding_test_file.write(f"{row['path']}|{row['emotion']}\n")
-        except IOError as e:
-            print(e)
-embedding_test_file.close()
+# dataframe = pd.read_csv("Data/validation_list.txt", sep=",", names=["actor_id","statement_id","source_path","source_emotion","reference_path","reference_emotion"])
+# embedding_test_file = open("Data/emotion_embedding_test_file.txt","w")
+# # Create validation file
+# for index, group in dataframe.groupby(["source_emotion"]):
+#     _reduced_group = group[:50]
+#     # neutral_row_path = f"./{neutral_row['lang']}/{neutral_row['dataset']}/{neutral_row['path'][2:]}"
+#     for index,row in _reduced_group.iterrows():
+#         row['path'] = f"./{row['source_path'][2:]}"
+#         row['emotion']=row['source_emotion']
+#         try:
+#             embedding_test_file.write(f"{row['path']}|{row['emotion']}\n")
+#         except IOError as e:
+#             print(e)
+# embedding_test_file.close()
 
     
