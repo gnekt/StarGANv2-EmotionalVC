@@ -17,14 +17,13 @@ to_mel = torchaudio.transforms.MelSpectrogram(
 mean, std = -4, 4
 
 emotion_map={
-    "positive":2,
-    "negative":1
+    "happy":1
 }
 ###########################################################
 
 # Variable
 EMOTION_LABEL=[id for id, _ in emotion_map.items()]
-MDOEL_PATH='Models/Experiment-3-d/ex_3_d_backup.pth'
+MDOEL_PATH='Models/Experiment-6-Happy/ex_6_happy_backup.pth'
 DEMO_PATH='Demo/neutral.wav'
 SAMPLE_RATE=24e3
 SAMPLE_RATE=int(24e3)
@@ -91,7 +90,7 @@ _ = vocoder.eval()
 
 # load neural model
 print("Load neural model..")
-with open('Models/Experiment-3-d/config.yml') as f:
+with open('Models/Experiment-6-Happy/config.yml') as f:
     starganv2_config = yaml.safe_load(f)
 starganv2 = build_model(model_params=starganv2_config["model_params"])
 params = torch.load(MDOEL_PATH, map_location='cuda:1')
@@ -127,17 +126,15 @@ converted_mels = {}
 
 
 converted_samples = {
-    "negative":1,
-    "positive":2
+    "happy":1
 }
 
 with torch.no_grad():
         out = starganv2.generator(source.unsqueeze(1), reference_embeddings)
         c = out.transpose(-1, -2).squeeze().to(DEVICE)
-        for i,(emotion,value) in enumerate(converted_samples.items()):
-            y_out = vocoder.inference(c[i])
-            y_out = y_out.view(-1).cpu()
-            converted_samples[emotion]=y_out
+        y_out = vocoder.inference(c)
+        y_out = y_out.view(-1).cpu()
+        converted_samples["happy"]=y_out
             
 end = time.time()
 print('total processing time: %.3f sec' % (end - start) )
@@ -146,4 +143,4 @@ for key, wave in converted_samples.items():
     emotion=key
     print('Converted: %s' % key)
     print("storing sample..")
-    sf.write(f'./Demo/out/{emotion}/ex_3_d.wav', wave, SAMPLE_RATE)
+    sf.write(f'./Demo/out/{emotion}/ex_6_happy.wav', wave, SAMPLE_RATE)

@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 
 from typing import Tuple, Dict, List
 
-from dataset.emotion_mapping import emotion_map
+from dataset.emotion_mapping_sad import emotion_map
 
 np.random.seed(1)
 random.seed(1)
