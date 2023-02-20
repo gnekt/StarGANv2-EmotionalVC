@@ -1,4 +1,3 @@
-dataset,lang,path,actor_id,gender,emotion,statement_id
 esd,en,./dataset/eng/ESD/0012/Angry/0012_000700.wav,12,f,1,350
 esd,en,./dataset/eng/ESD/0014/Neutral/0014_000330.wav,14,m,0,330
 esd,en,./dataset/eng/ESD/0018/Neutral/0018_000262.wav,18,f,0,262

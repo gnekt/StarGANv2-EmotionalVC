@@ -243,7 +243,11 @@ def build_dataloader(dataset_path: str,
         raise FileNotFoundError(f"Check path! {dataset_path} does not exist!")
 
     dataset = pd.read_csv(dataset_path, sep=separetor, names=data_header)
-    
+    dataset['dataset'] = dataset['dataset'].astype(str)
+    dataset['path'] = dataset['path'].astype(str)
+    dataset['actor_id'] = dataset['actor_id'].astype(str)
+    dataset['statement_id'] = dataset['statement_id'].astype(str)
+    dataset['emotion'] = dataset['emotion'].astype(int)
     dataset = MelDataset(dataset)
     
     
