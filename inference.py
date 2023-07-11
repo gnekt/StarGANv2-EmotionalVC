@@ -27,7 +27,7 @@ mean, std = -4, 4
 # Variable
 EMOTION_LABEL = [id for id, _ in emotion_map.items()]
 MDOEL_PATH = 'Models/Experiment-2/ex_2_epoch.pth'
-DEMO_PATH = 'Demo/neutral.wav'
+DEMO_PATH = 'neutral.wav'
 SAMPLE_RATE = 24e3
 SAMPLE_RATE = int(24e3)
 DEVICE = "cuda"
